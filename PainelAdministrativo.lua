@@ -841,7 +841,7 @@ function check_update(notify_no_update)
     local dlstatus = require('moonloader').download_status
     local temp_path = os.getenv('TEMP') .. '\\PainelInfoHelper_update_' .. os.time() .. '_' .. math.random(1, 100000) .. '.lua'
     
-    if notify_no_update then sampAddChatMessage("[PainelInfoHelper] Verificando atualizacoes...", -1) end
+    if notify_no_update then sampAddChatMessage("[PainelInfoHelper] Verificando atualizacoes... (Aguarde)", -1) end
 
     downloadUrlToFile(script_url, temp_path, function(id, status, p1, p2)
         if status == dlstatus.STATUS_ENDDOWNLOADDATA then
@@ -853,28 +853,40 @@ function check_update(notify_no_update)
                 local remote_ver = tonumber(content:match("script_version_number%((%d+)%)"))
                 local local_ver = thisScript().version_number or 0
                 
-                if remote_ver and remote_ver > local_ver then
-                    sampAddChatMessage("[PainelInfoHelper] Nova versao encontrada: v" .. remote_ver, 0xFFFF00)
-                    sampAddChatMessage("[PainelInfoHelper] Atualizando automaticamente...", 0xFFFF00)
-                    
-                    local f_curr = io.open(thisScript().path, "wb")
-                    if f_curr then
-                        f_curr:write(content)
-                        f_curr:close()
-                        os.remove(temp_path)
-                        sampAddChatMessage("[PainelInfoHelper] Atualizacao concluida! Recarregando script...", 0x00FF00)
-                        thisScript():reload()
+                if remote_ver then
+                    if remote_ver > local_ver then
+                        sampAddChatMessage("[PainelInfoHelper] Nova versao encontrada: v" .. remote_ver, 0xFFFF00)
+                        sampAddChatMessage("[PainelInfoHelper] Atualizando automaticamente...", 0xFFFF00)
+                        
+                        local f_curr = io.open(thisScript().path, "wb")
+                        if f_curr then
+                            f_curr:write(content)
+                            f_curr:close()
+                            os.remove(temp_path)
+                            sampAddChatMessage("[PainelInfoHelper] Atualizacao concluida! Recarregando script...", 0x00FF00)
+                            thisScript():reload()
+                        else
+                            sampAddChatMessage("[PainelInfoHelper] Erro ao gravar atualizacao (Arquivo em uso).", 0xFF0000)
+                            os.remove(temp_path)
+                        end
                     else
-                        sampAddChatMessage("[PainelInfoHelper] Erro ao gravar atualizacao (Arquivo em uso).", 0xFF0000)
                         os.remove(temp_path)
+                        if notify_no_update then
+                            sampAddChatMessage("[PainelInfoHelper] Voce ja esta usando a versao mais recente (v" .. local_ver .. ").", 0x00FF00)
+                        end
                     end
                 else
                     os.remove(temp_path)
                     if notify_no_update then
-                        sampAddChatMessage("[PainelInfoHelper] Voce ja esta usando a versao mais recente.", 0x00FF00)
+                        sampAddChatMessage("[PainelInfoHelper] Erro: O arquivo no GitHub nao parece ser o script valido.", 0xFF0000)
+                        if content:find("404") then
+                            sampAddChatMessage("[Debug] Erro 404: Link incorreto ou arquivo inexistente.", 0xAAAAAA)
+                        end
                     end
                 end
             end
+        elseif status == dlstatus.STATUS_ERROR then
+            if notify_no_update then sampAddChatMessage("[PainelInfoHelper] Erro de conexao ao baixar atualizacao.", 0xFF0000) end
         end
     end)
 end
