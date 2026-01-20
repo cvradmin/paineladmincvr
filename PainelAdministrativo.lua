@@ -835,7 +835,7 @@ function apply_theme(theme_name)
 end
 
 -- SISTEMA DE ATUALIZACAO AUTOMATICA (GITHUB)
-local script_url = "https://raw.githubusercontent.com/nicholassud-beep/paineladmincvr/main/PainelAdministrativo"
+local script_url = "https://raw.githubusercontent.com/nicholassud-beep/paineladmincvr/main/PainelAdministrativo.lua"
 
 function check_update(notify_no_update)
     local dlstatus = require('moonloader').download_status
@@ -881,6 +881,8 @@ function check_update(notify_no_update)
                         sampAddChatMessage("[PainelInfoHelper] Erro: O arquivo no GitHub nao parece ser o script valido.", 0xFF0000)
                         if content:find("404") then
                             sampAddChatMessage("[Debug] Erro 404: Link incorreto ou arquivo inexistente.", 0xAAAAAA)
+                        else
+                            sampAddChatMessage("[Debug] Versao nao encontrada no arquivo baixado. Verifique o link RAW.", 0xAAAAAA)
                         end
                     end
                 end
