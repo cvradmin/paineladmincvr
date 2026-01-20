@@ -15,6 +15,7 @@ local u8 = function(s) return s and encoding.UTF8(s) or "" end
 script_name("PainelInfoHelper")
 script_author("Gerado por ChatGPT - Adaptado por Gemini")
 script_version("1.0.39-CmdExtra")
+script_version_number(1039)
 
 -- Janela state
 local state = {
@@ -668,6 +669,51 @@ function apply_theme(theme_name)
     end
 end
 
+-- SISTEMA DE ATUALIZACAO AUTOMATICA (GITHUB)
+local script_url = "https://raw.githubusercontent.com/nicholassud-beep/paineladmincvr/main/PainelInfoHelper.lua"
+
+function check_update(notify_no_update)
+    local dlstatus = require('moonloader').download_status
+    local temp_path = os.getenv('TEMP') .. '\\PainelInfoHelper_update_' .. os.time() .. '_' .. math.random(1, 100000) .. '.lua'
+    
+    if notify_no_update then sampAddChatMessage("[PainelInfoHelper] Verificando atualizacoes...", -1) end
+
+    downloadUrlToFile(script_url, temp_path, function(id, status, p1, p2)
+        if status == dlstatus.STATUS_ENDDOWNLOADDATA then
+            local f = io.open(temp_path, 'r')
+            if f then
+                local content = f:read('*a')
+                f:close()
+                
+                local remote_ver = tonumber(content:match("script_version_number%((%d+)%)"))
+                local local_ver = thisScript().version_number or 0
+                
+                if remote_ver and remote_ver > local_ver then
+                    sampAddChatMessage("[PainelInfoHelper] Nova versao encontrada: v" .. remote_ver, 0xFFFF00)
+                    sampAddChatMessage("[PainelInfoHelper] Atualizando automaticamente...", 0xFFFF00)
+                    
+                    local f_curr = io.open(thisScript().path, "wb")
+                    if f_curr then
+                        f_curr:write(content)
+                        f_curr:close()
+                        os.remove(temp_path)
+                        sampAddChatMessage("[PainelInfoHelper] Atualizacao concluida! Recarregando script...", 0x00FF00)
+                        thisScript():reload()
+                    else
+                        sampAddChatMessage("[PainelInfoHelper] Erro ao gravar atualizacao (Arquivo em uso).", 0xFF0000)
+                        os.remove(temp_path)
+                    end
+                else
+                    os.remove(temp_path)
+                    if notify_no_update then
+                        sampAddChatMessage("[PainelInfoHelper] Voce ja esta usando a versao mais recente.", 0x00FF00)
+                    end
+                end
+            end
+        end
+    end)
+end
+
 -- FUNÇÕES DE CABEÇALHO
 local function draw_vehicle_header() 
     local idw=50; local nw=180; local pw=100; local spdw=100; local st="|"; local sw=imgui.CalcTextSize(st).x; local sp=imgui.GetStyle().ItemSpacing.x; local sc=imgui.GetStyle().Colors[imgui.Col.Separator]; 
@@ -1126,6 +1172,10 @@ function imgui.OnDrawFrame()
                 inicfg.save(cfg, "PainelInfoHelper_Config.ini")
                 sampAddChatMessage("[PI] Tema e configuracoes salvos como favoritos!", -1)
             end
+
+            if imgui.Button("Verificar Atualizacoes", imgui.ImVec2(-1, 25)) then
+                check_update(true)
+            end
             
             imgui.Text("Senha Admin:")
             imgui.PushItemWidth(150)
@@ -1196,6 +1246,7 @@ function main()
     state.ip_extractor_total_buf.v = "300"
     apply_theme(saved_theme)
     sampAddChatMessage("[PainelInfoHelper] Carregado e funcional! Pressione F12.", 0x00FF00)
+    check_update()
 
     while true do wait(0)
         if waiting_for_bind then
