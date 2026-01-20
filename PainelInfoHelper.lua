@@ -5,6 +5,7 @@
 require 'lib.moonloader'
 require 'lib.sampfuncs'
 local sampev = require 'lib.samp.events'
+local bit = require 'bit'
 
 local imgui = require 'imgui'
 local vkeys = require 'vkeys'
@@ -16,6 +17,22 @@ script_name("PainelInfoHelper")
 script_author("Gerado por ChatGPT - Adaptado por Gemini")
 script_version("1.0.39-CmdExtra")
 script_version_number(1039)
+
+-- VARIAVEIS DO ADMIN ESP (INTEGRACAO)
+local esp_active = false
+local esp_font = renderCreateFont('Arial', 10, 5) -- Arial 10 com Borda
+local esp_spectate_id = -1
+local esp_spectate_vehicle_id = -1
+local weapon_names_esp = {
+    [0]="Punhos", [1]="Soco Ingles", [2]="Taco de Golf", [3]="Cassetete", [4]="Faca", [5]="Taco de Basebol",
+    [6]="Pa", [7]="Taco de Bilhar", [8]="Katana", [9]="Serra Eletrica", [10]="Dildo Roxo", [11]="Dildo Branco",
+    [12]="Vibrador", [13]="Vibrador Prata", [14]="Flores", [15]="Bengala", [16]="Granada", [17]="Gas Lacrimogeneo",
+    [18]="Molotov", [22]="Pistola 9mm", [23]="Pistola Silenciada", [24]="Desert Eagle", [25]="Shotgun",
+    [26]="Sawnoff", [27]="Combat Shotgun", [28]="Micro Uzi", [29]="MP5", [30]="AK-47", [31]="M4", [32]="Tec-9",
+    [33]="Country Rifle", [34]="Sniper", [35]="RPG", [36]="Missil Teleguiado", [37]="Lanca Chamas", [38]="Minigun",
+    [39]="C4", [40]="Detonador", [41]="Spray", [42]="Extintor", [43]="Camera", [44]="Visao Noturna", [45]="Visao Termica",
+    [46]="Paraquedas"
+}
 
 -- Janela state
 local state = {
@@ -73,6 +90,7 @@ if not cfg.main then cfg.main = cfg_default.main end
 if not cfg.main.admin_pass then cfg.main.admin_pass = cfg_default.main.admin_pass end
 if not cfg.main.bind then cfg.main.bind = 123 end
 if cfg.main.auto_cheat == nil then cfg.main.auto_cheat = false end
+if not cfg.main.esp_distance then cfg.main.esp_distance = 6000 end
 if not cfg.blacklist then cfg.blacklist = {} end
 
 -- LISTA DE TEMAS
@@ -410,6 +428,98 @@ local function filter_interiors(l, t)
     return f
 end
 
+-- FUNCAO LOGICA DO ESP (DESENHO NA TELA)
+local function draw_esp_logic()
+    if esp_active and esp_font then
+        local myX, myY, myZ = getCharCoordinates(PLAYER_PED)
+        
+        for _, handle in ipairs(getAllChars()) do
+            if doesCharExist(handle) and handle ~= PLAYER_PED then
+                local res, id = sampGetPlayerIdByCharHandle(handle)
+                if res and sampIsPlayerConnected(id) then
+                    -- Protecao de Spectate (Nao mostrar quem voce esta telando)
+                    local skip = false
+                    if esp_spectate_id ~= -1 and id == esp_spectate_id then skip = true end
+                    if not skip and esp_spectate_vehicle_id ~= -1 and isCharInAnyCar(handle) then
+                        local car = getCarCharIsUsing(handle)
+                        local res, carId = sampGetVehicleIdByCarHandle(car)
+                        if res and carId == esp_spectate_vehicle_id then skip = true end
+                    end
+
+                    if not skip then
+                        local x, y, z = getCharCoordinates(handle)
+                        
+                        -- Verifica se esta no campo de visao
+                        if isPointOnScreen(x, y, z, 0.0) then
+                            local dist = getDistanceBetweenCoords3d(myX, myY, myZ, x, y, z)
+                            
+                            -- Verifica barreiras
+                            local checkVeh = true
+                            if isCharInAnyCar(handle) then checkVeh = false end
+                            local camX, camY, camZ = getActiveCameraCoordinates()
+                            local visible = isLineOfSightClear(camX, camY, camZ, x, y, z + 0.7, true, checkVeh, false, true, false)
+                            
+                            -- Wallhack ou Distancia > 65m
+                            if dist < cfg.main.esp_distance and (not visible or dist > 65) then
+                                local headX, headY = convert3DCoordsToScreen(x, y, z + 2.6)
+                                
+                                if headX and headY then
+                                    local nick = sampGetPlayerNickname(id) or "Unknown"
+                                    local hp = getCharHealth(handle)
+                                    local armor = getCharArmour(handle)
+                                    if hp > 100 then hp = 100 end; if hp < 0 then hp = 0 end; if armor > 100 then armor = 100 end
+                                    
+                                    local pColor = sampGetPlayerColor(id)
+                                    if pColor == 0 then pColor = 0xFFFFFFFF end
+                                    pColor = bit.bor(pColor, 0xFF000000)
+                                    
+                                    local text = string.format("%s (%d)", nick, id)
+                                    local textLen = renderGetFontDrawTextLength(esp_font, text)
+                                    local textX = headX - (textLen / 2); local textY = headY
+                                    renderFontDrawText(esp_font, text, textX, textY, pColor)
+                                    
+                                    local barW = 40; local barH = 5; local barX = headX - (barW / 2); local barY = textY + 15
+                                    renderDrawBox(barX - 1, barY - 1, barW + 2, barH + 2, 0xFF000000)
+                                    if hp > 0 then local hpW = barW * (hp / 100); renderDrawBox(barX, barY, hpW, barH, 0xFFB92228) end
+
+                                    local nextY = barY + barH + 3
+                                    if armor > 0 then
+                                        local armY = nextY
+                                        renderDrawBox(barX - 1, armY - 1, barW + 2, barH + 2, 0xFF000000)
+                                        local armW = barW * (armor / 100)
+                                        renderDrawBox(barX, armY, armW, barH, 0xFFF5F5F5)
+                                        nextY = armY + barH + 2
+                                    end
+
+                                    local wep = getCurrentCharWeapon(handle)
+                                    if wep and wep > 0 and weapon_names_esp[wep] then
+                                        local wname = weapon_names_esp[wep]
+                                        local wLen = renderGetFontDrawTextLength(esp_font, wname)
+                                        renderFontDrawText(esp_font, wname, headX - (wLen / 2), nextY, 0xFFFFFFFF)
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
+local function getPlayerId(arg)
+    local id = tonumber(arg)
+    if id then return id end
+    local name = arg:lower()
+    for i = 0, 1000 do
+        if sampIsPlayerConnected(i) then
+            local nick = sampGetPlayerNickname(i)
+            if nick and nick:lower():find(name, 1, true) then return i end
+        end
+    end
+    return nil
+end
+
 function sampev.onServerMessage(color, text)
     if state.ip_extractor_active then
         local ip = text:match("(%d+%.%d+%.%d+%.%d+)")
@@ -467,9 +577,22 @@ function sampev.onSendCommand(cmd)
         -- Reseta a flag apos 3 segundos caso o servidor nao responda ou algo falhe
         lua_thread.create(function() wait(3000) state.stop_spec_requested = false end)
     end
+    
+    local cmd_name, params = cmd:match("^/([%w_]+)%s*(.*)")
+    if cmd_name == "espiar" or cmd_name == "re" or cmd_name == "spec" then
+        if #params > 0 then
+            local id = getPlayerId(params)
+            if id then esp_spectate_id = id end
+        end
+    end
 end
 
 function sampev.onTogglePlayerSpectating(toggle)
+    if not toggle then 
+        esp_spectate_id = -1 
+        esp_spectate_vehicle_id = -1
+    end
+
     if toggle then
         state.stop_spec_requested = false -- Garante que a flag esteja desligada ao entrar no spec
     elseif state.stop_spec_requested then
@@ -479,6 +602,16 @@ function sampev.onTogglePlayerSpectating(toggle)
             sampSendChat("/godmod")
         end)
     end
+end
+
+function sampev.onSpectatePlayer(playerId, camType)
+    esp_spectate_id = playerId
+    esp_spectate_vehicle_id = -1
+end
+
+function sampev.onSpectateVehicle(vehicleId, camType)
+    esp_spectate_vehicle_id = vehicleId
+    esp_spectate_id = -1
 end
 
 local function strip_colors(text)
@@ -1081,6 +1214,18 @@ function imgui.OnDrawFrame()
             if imgui.Button("/comandosadm", imgui.ImVec2(150, 30)) then sampSendChat("/comandosadm") end
             imgui.SameLine(); imgui.Text("Mostra a lista de comandos administrativos.")
 
+            if imgui.Button(esp_active and "Desativar ESP" or "Ativar ESP", imgui.ImVec2(150, 30)) then
+                esp_active = not esp_active
+                sampAddChatMessage(esp_active and "[PI] ESP Admin Ativado." or "[PI] ESP Admin Desativado.", -1)
+            end
+            imgui.SameLine(); imgui.Text("Wallhack de nome/vida/colete (Estilo SA-MP).")
+            
+            local dist_esp = imgui.ImFloat(cfg.main.esp_distance)
+            if imgui.SliderFloat("Distancia ESP", dist_esp, 100.0, 30000.0, "%.0f") then
+                cfg.main.esp_distance = dist_esp.v
+                inicfg.save(cfg, "PainelInfoHelper_Config.ini")
+            end
+
             imgui.Separator()
             imgui.Text("Extrator de IPs")
             if not state.ip_extractor_active then
@@ -1237,6 +1382,10 @@ end
 local function toggle_window() state.window_open.v = not state.window_open.v; imgui.Process = state.window_open.v end
 sampRegisterChatCommand("painelhelper", toggle_window); sampRegisterChatCommand("phelper", toggle_window)
 sampRegisterChatCommand("flogar", start_admin_login)
+sampRegisterChatCommand("admesp", function() 
+    esp_active = not esp_active
+    sampAddChatMessage(esp_active and "[PI] ESP Admin Ativado." or "[PI] ESP Admin Desativado.", -1)
+end)
 
 function main()
     while not isSampfuncsLoaded() do wait(100) end; while not isSampAvailable() do wait(100) end; imgui.Process = state.window_open.v
@@ -1249,6 +1398,7 @@ function main()
     check_update()
 
     while true do wait(0)
+        draw_esp_logic()
         if waiting_for_bind then
             for k = 1, 255 do
                 if wasKeyPressed(k) then
