@@ -15,8 +15,8 @@ local u8 = function(s) return s and encoding.UTF8(s) or "" end
 
 script_name("PainelInfoHelper")
 script_author("Gerado por ChatGPT - Adaptado por Gemini")
-script_version("1.0.41-FixLink")
-script_version_number(1041)
+script_version("1.0.42-FixLoop")
+script_version_number(1042)
 
 -- VARIAVEIS DO ADMIN ESP (INTEGRACAO)
 local esp_active = false
@@ -834,6 +834,9 @@ function apply_theme(theme_name)
     end
 end
 
+-- Flag para recarregar o script com seguranca
+local should_reload = false
+
 -- SISTEMA DE ATUALIZACAO AUTOMATICA (GITHUB)
 local script_url = "https://raw.githubusercontent.com/nicholassud-beep/paineladmincvr/main/PainelAdministrativo.lua"
 
@@ -864,7 +867,7 @@ function check_update(notify_no_update)
                             f_curr:close()
                             os.remove(temp_path)
                             sampAddChatMessage("[PainelInfoHelper] Atualizacao concluida! Recarregando script...", 0x00FF00)
-                            thisScript():reload()
+                            should_reload = true
                         else
                             sampAddChatMessage("[PainelInfoHelper] Erro ao gravar atualizacao (Arquivo em uso).", 0xFF0000)
                             os.remove(temp_path)
@@ -1444,6 +1447,10 @@ function main()
     check_update()
 
     while true do wait(0)
+        if should_reload then
+            should_reload = false
+            thisScript():reload()
+        end
         draw_esp_logic()
         if waiting_for_bind then
             for k = 1, 255 do
