@@ -15,7 +15,7 @@ local u8 = function(s) return s and encoding.UTF8(s) or "" end
 
 script_name("PainelInfo")
 script_author("Gerado por ChatGPT (GPT-5 Thinking mini) - Consolidado e Corrigido por Gemini")
-script_version("8.9.34-GodModSpec")
+script_version("8.9.35-GodModSpec")
 script_version_number(8934)
 
 -- VARIAVEIS DO ADMIN ESP (INTEGRACAO)
@@ -1828,3 +1828,4 @@ function main()
         end
     end
 end
+
