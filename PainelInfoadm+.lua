@@ -1743,8 +1743,13 @@ sampRegisterChatCommand("admesp", function()
     esp_active = not esp_active
     sampAddChatMessage(esp_active and "[PI] ESP Admin Ativado." or "[PI] ESP Admin Desativado.", -1)
 end)
+sampRegisterChatCommand("verversao", function() check_update(true) end)
+sampRegisterChatCommand("limparchat", function()
+    for i = 1, 100 do sampAddChatMessage("", -1) end
+    sampAddChatMessage("[PainelInfo] Chat limpo localmente.", 0x00FF00)
+end)
 
-function check_update()
+function check_update(notify)
     local dlstatus = require('moonloader').download_status
     local temp_path = os.getenv('TEMP') .. '\\painelinfo_ver_' .. os.time() .. '.json'
     downloadUrlToFile("https://raw.githubusercontent.com/nicholassud-beep/paineladmincvr/main/version.json", temp_path, function(id, status, p1, p2)
@@ -1759,6 +1764,8 @@ function check_update()
                 if remote_ver and remote_ver > local_ver then
                     sampAddChatMessage("[PainelInfo] Nova versao disponivel: v" .. (info.latest_version_text or "?"), 0xFFFF00)
                     sampAddChatMessage("[PainelInfo] Acesse o GitHub para baixar a atualizacao.", 0xFFFF00)
+                elseif notify then
+                    sampAddChatMessage("[PainelInfo] Voce ja esta usando a versao mais recente (v" .. thisScript().version .. ").", 0x00FF00)
                 end
             end
         end
