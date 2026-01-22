@@ -1754,7 +1754,9 @@ function check_update()
                 local info = decodeJson(f:read('*a'))
                 f:close()
                 os.remove(temp_path)
-                if info and info.latest_version_number and tonumber(info.latest_version_number) > thisScript().version_number then
+                local remote_ver = info and tonumber(info.latest_version_number)
+                local local_ver = thisScript().version_number or 0
+                if remote_ver and remote_ver > local_ver then
                     sampAddChatMessage("[PainelInfo] Nova versao disponivel: v" .. (info.latest_version_text or "?"), 0xFFFF00)
                     sampAddChatMessage("[PainelInfo] Acesse o GitHub para baixar a atualizacao.", 0xFFFF00)
                 end
