@@ -142,7 +142,11 @@ local script_url = "https://raw.githubusercontent.com/nicholassud-beep/paineladm
 
 function check_update(notify_no_update)
     local dlstatus = require('moonloader').download_status
-    local json_path = os.getenv('TEMP') .. '\\painelinfo_version_' .. os.time() .. '.json'
+    math.randomseed(os.time() + os.clock() * 1000)
+    -- Usando getWorkingDirectory() para evitar erros de permissao/busy no %TEMP%
+    local unique_id = os.time() .. '_' .. math.random(1000, 9999) .. '_' .. tostring(os.clock()):gsub("%.", "")
+    local json_path = getWorkingDirectory() .. '\\painelinfo_version_' .. unique_id .. '.json'
+    if doesFileExist(json_path) then os.remove(json_path) end
     
     if notify_no_update then sampAddChatMessage("[PainelInfo] Verificando atualizacoes...", -1) end
 
@@ -158,7 +162,8 @@ function check_update(notify_no_update)
                 if remote_ver and remote_ver > local_ver then
                     sampAddChatMessage("[PainelInfo] Nova versao encontrada: v" .. (info.latest_version_text or "?"), 0xFFFF00)
                     sampAddChatMessage("[PainelInfo] Atualizando automaticamente...", 0xFFFF00)
-                    local temp_path = thisScript().path .. ".upd"
+                    local temp_path = getWorkingDirectory() .. '\\PainelInfo_update_' .. unique_id .. '.tmp'
+                    if doesFileExist(temp_path) then os.remove(temp_path) end
                     downloadUrlToFile(script_url, temp_path, function(id2, status2, p12, p22)
                         if status2 == dlstatus.STATUS_ENDDOWNLOADDATA then
                             local f_new = io.open(temp_path, "rb")
@@ -1287,14 +1292,16 @@ local function draw_players_tab()
 
         for _,p in ipairs(list) do
             local is_s=p.is_staff; local paused=sampIsPlayerPaused(p.id); local disp_p=p.profession or "?"; if paused then if is_s then disp_p=u8(p.profession).." (AFK)" else disp_p="AFK" end end
+            local curX = imgui.GetCursorPosX()
             local line_lbl=string.format("##p_%d",p.id)
-            imgui.Selectable(line_lbl, false, imgui.SelectableFlags.SpanAllColumns, imgui.ImVec2(0, imgui.GetTextLineHeight()))
+            imgui.Selectable(line_lbl, false, imgui.SelectableFlags_SpanAllColumns, imgui.ImVec2(0, imgui.GetTextLineHeight()))
+            imgui.SetItemAllowOverlap()
             if imgui.BeginPopupContextItem("p_act"..p.id) then if imgui.MenuItem("CP Nick") then imgui.SetClipboardText(u8(p.nick)); sampAddChatMessage("Nick CP",0) end; if p.profession then if imgui.MenuItem("CP Info") then imgui.SetClipboardText(u8(p.profession)); sampAddChatMessage("Info CP",0) end end; imgui.Separator(); if imgui.MenuItem("Ir ID") then sampSendChat("/ir "..p.id); state.window_open.v=false; imgui.Process=false end; if imgui.MenuItem("Espiar ID") then sampSendChat("/espiar "..p.id); state.window_open.v=false; imgui.Process=false end; if imgui.MenuItem("Ver IP") then sampSendChat("/ip "..p.id); logIPRequestToFile(p.id,p.nick) end; if imgui.MenuItem("Ver Docs") then sampSendChat("/documentos "..p.id); state.window_open.v=false; imgui.Process=false end; imgui.EndPopup() end
 
             local p1s=idw; local p2ns=p1s+sw+sp; local p2s=p2ns+nickw
             local p3ps,p3s,p4ls
 
-            imgui.SameLine(0); imgui.TextColored(p.color,tostring(p.id))
+            imgui.SameLine(curX); imgui.TextColored(p.color,tostring(p.id))
             imgui.SameLine(p1s); imgui.TextColored(sc,st)
             imgui.SameLine(p2ns); imgui.TextColored(p.color,u8(p.nick))
 
@@ -1351,14 +1358,15 @@ local function draw_info_tab()
                 local sc=IMAGE_GREY; local st="|"; local stw=imgui.CalcTextSize(st).x; local sp=imgui.GetStyle().ItemSpacing.x; 
                 local p1s=nw; local p2ls=p1s+stw+sp; local p2s=p2ls+lw; local p3ss=p2s+stw+sp; local p3s=p3ss+salw; local p4as=p3s+stw+sp; 
                 for _,p in ipairs(l) do 
+                    local curX = imgui.GetCursorPosX()
                     local lbl=string.format("##pli_%s%d",p.name or "u", p.level or 0); 
-                    imgui.Selectable(lbl,false,imgui.SelectableFlags.SpanAllColumns,imgui.ImVec2(0,imgui.GetTextLineHeight())); 
+                    imgui.Selectable(lbl,false,imgui.SelectableFlags_SpanAllColumns,imgui.ImVec2(0,imgui.GetTextLineHeight())); 
                     imgui.SetItemAllowOverlap()
                     if imgui.IsItemHovered() and imgui.IsMouseDoubleClicked(0) then 
                         sampSendChat(string.format("/setprof %d", p.id)); 
                         sampAddChatMessage(string.format("{FFFFFF}[PI] Profissao definida: {FFFF00}%s {FFFFFF}(ID: %d)", p.name or "?", p.id), -1) 
                     end; 
-                    imgui.SameLine(0); imgui.Text(p.name or "?"); 
+                    imgui.SameLine(curX); imgui.Text(p.name or "?"); 
                     imgui.SameLine(p1s); imgui.TextColored(sc,st); 
                     imgui.SameLine(p2ls); imgui.Text(tostring(p.level or "?")); 
                     imgui.SameLine(p2s); imgui.TextColored(sc,st); 
@@ -1394,15 +1402,16 @@ local function draw_info_tab()
             local align_offset = imgui.GetStyle().FramePadding.x
             local p1s=idw; local p2ns=p1s+stw+sp; local p2s=p2ns+nw; local p3ps=p2s+stw+sp; local p3s=p3ps+pw; local p4ss=p3s+stw+sp; local p4s=p4ss+swid; local p5ts=p4s+stw+sp; local p5s=p5ts+typew; local p6as=p5s+stw+sp; 
             for _,v in ipairs(filt_v) do 
+                local curX = imgui.GetCursorPosX()
                 local lbl=string.format("##vli_%d",v.id); 
-                imgui.Selectable(lbl,false,imgui.SelectableFlags.SpanAllColumns,imgui.ImVec2(0,imgui.GetTextLineHeight())); 
+                imgui.Selectable(lbl,false,imgui.SelectableFlags_SpanAllColumns,imgui.ImVec2(0,imgui.GetTextLineHeight())); 
                 imgui.SetItemAllowOverlap()
                 if imgui.IsItemHovered() and imgui.IsMouseDoubleClicked(0) then 
                     sampSendChat("/cv "..v.id)
                     sampAddChatMessage("[PI] Criando veiculo ID "..v.id.." ("..v.name..")",-1) 
                 end; 
                 local p_str=(v.price and v.price>0) and ("$"..formatPrice(v.price)) or "0"; local s_str=v.speed and (v.speed.." km/h") or "?"; local t_str=v.type or "?"; 
-                imgui.SameLine(0 + align_offset); imgui.Text(tostring(v.id)); 
+                imgui.SameLine(curX + align_offset); imgui.Text(tostring(v.id)); 
                 imgui.SameLine(p1s); imgui.TextColored(sc,st); imgui.SameLine(p2ns + align_offset); imgui.Text(v.name); 
                 imgui.SameLine(p2s); imgui.TextColored(sc,st); imgui.SameLine(p3ps + align_offset); imgui.TextColored(IMAGE_YELLOW,p_str); 
                 imgui.SameLine(p3s); imgui.TextColored(sc,st); imgui.SameLine(p4ss + align_offset); imgui.TextColored(IMAGE_PINK,s_str); 
@@ -1420,8 +1429,9 @@ local function draw_info_tab()
             local idw=50; local namew=200; local sc=IMAGE_GREY; local st="|"; local stw=imgui.CalcTextSize(st).x; local sp=imgui.GetStyle().ItemSpacing.x; 
             local p1s=idw; local p2ns=p1s+stw+sp; local p2s=p2ns+namew; local p3as=p2s+stw+sp; 
             for _,s in ipairs(filt_s) do 
+                local curX = imgui.GetCursorPosX()
                 local lbl=string.format("##sli_%d",s.id); 
-                imgui.Selectable(lbl,false,imgui.SelectableFlags.SpanAllColumns,imgui.ImVec2(0,imgui.GetTextLineHeight())); 
+                imgui.Selectable(lbl,false,imgui.SelectableFlags_SpanAllColumns,imgui.ImVec2(0,imgui.GetTextLineHeight())); 
                 imgui.SetItemAllowOverlap()
                 if imgui.IsItemHovered() and imgui.IsMouseDoubleClicked(0) then 
                     local tid=tonumber(state.target_id_buf.v); 
@@ -1431,7 +1441,7 @@ local function draw_info_tab()
                         sampAddChatMessage(string.format("[PI] Skin %d aplicada no ID %d.",s.id,tid),-1) 
                     end 
                 end; 
-                imgui.SameLine(0); imgui.Text(tostring(s.id)); imgui.SameLine(p1s); imgui.TextColored(sc,st); imgui.SameLine(p2ns); imgui.Text(s.name or "?") 
+                imgui.SameLine(curX); imgui.Text(tostring(s.id)); imgui.SameLine(p1s); imgui.TextColored(sc,st); imgui.SameLine(p2ns); imgui.Text(s.name or "?") 
                 imgui.SameLine(p2s); imgui.TextColored(sc,st); imgui.SameLine(p3as); 
                 if imgui.SmallButton("Aplicar##btn_s_"..s.id) then 
                     local tid=tonumber(state.target_id_buf.v); 
@@ -1455,8 +1465,9 @@ local function draw_info_tab()
             local sc=IMAGE_GREY; local st="|"; local stw=imgui.CalcTextSize(st).x; local sp=imgui.GetStyle().ItemSpacing.x; 
             local p1s=idw; local p2ns=p1s+stw+sp; local p2s=p2ns+nw; local p3ts=p2s+stw+sp; local p3s=p3ts+typew; local p4as=p3s+stw+sp; 
             for _,w in ipairs(filt_w) do 
+                local curX = imgui.GetCursorPosX()
                 local lbl=string.format("##wli_%d",w.id); 
-                imgui.Selectable(lbl,false,imgui.SelectableFlags.SpanAllColumns,imgui.ImVec2(0,imgui.GetTextLineHeight())); 
+                imgui.Selectable(lbl,false,imgui.SelectableFlags_SpanAllColumns,imgui.ImVec2(0,imgui.GetTextLineHeight())); 
                 imgui.SetItemAllowOverlap()
                 if imgui.IsItemHovered() and imgui.IsMouseDoubleClicked(0) then 
                     local tid=tonumber(state.target_id_buf.v); local ammo=tonumber(state.ammo_amount_buf.v) or 500; 
@@ -1466,7 +1477,7 @@ local function draw_info_tab()
                         sampAddChatMessage(string.format("[PI] Arma %s (%d) dada ao ID %d.",w.name or "?",ammo,tid),-1) 
                     end 
                 end; 
-                imgui.SameLine(0); imgui.Text(tostring(w.id)); 
+                imgui.SameLine(curX); imgui.Text(tostring(w.id)); 
                 imgui.SameLine(p1s); imgui.TextColored(sc,st); imgui.SameLine(p2ns); imgui.Text(w.name or "?"); 
                 imgui.SameLine(p2s); imgui.TextColored(sc,st); imgui.SameLine(p3ts); imgui.TextColored(IMAGE_BLUE,w.type or "?") 
                 imgui.SameLine(p3s); imgui.TextColored(sc,st); imgui.SameLine(p4as); 
@@ -1497,8 +1508,10 @@ local function draw_locais_tab()
         if cnt==0 then imgui.Text("Nenhum.") else 
             local nw=300; local cw=200; local sc=IMAGE_GREY; local st="|"; local sw=imgui.CalcTextSize(st).x; local sp=imgui.GetStyle().ItemSpacing.x; local p1s=nw; local p2cs=p1s+sw+sp; local p2s=p2cs+cw; local p3is=p2s+sw+sp; 
             for _,i in ipairs(filt_int) do 
+                local curX = imgui.GetCursorPosX()
                 local lbl=string.format("##int_%s%.1f",i.name or "u",i.x or 0); 
-                imgui.Selectable(lbl,false,imgui.SelectableFlags.SpanAllColumns,imgui.ImVec2(0,imgui.GetTextLineHeight())); 
+                imgui.Selectable(lbl,false,imgui.SelectableFlags_SpanAllColumns,imgui.ImVec2(0,imgui.GetTextLineHeight())); 
+                imgui.SetItemAllowOverlap()
                 
                 if imgui.BeginPopupContextItem() then
                     if imgui.Selectable("Adicionar aos Favoritos") then
@@ -1512,7 +1525,7 @@ local function draw_locais_tab()
                 if imgui.IsItemHovered() and imgui.IsMouseDoubleClicked(0) then local cmd=string.format("/tp %.4f %.4f %.4f %d",i.x,i.y,i.z,i.id); sampSendChat(cmd); sampAddChatMessage(string.format("[PI] TP para %s (ID:%d)",i.name or "?",i.id),-1) end; 
                 if imgui.IsItemHovered() then imgui.SetTooltip("Botao Direito: Favoritar | Duplo Clique: Ir") end
                 
-                imgui.SameLine(0); imgui.Text(i.name or "?"); imgui.SameLine(p1s); imgui.TextColored(sc,st); imgui.SameLine(p2cs); local ct=string.format("%.1f,%.1f,%.1f",i.x or 0,i.y or 0,i.z or 0); imgui.TextColored(IMAGE_PINK,ct); imgui.SameLine(p2s); imgui.TextColored(sc,st); imgui.SameLine(p3is); imgui.TextColored(IMAGE_BLUE,tostring(i.id or "?")) 
+                imgui.SameLine(curX); imgui.Text(i.name or "?"); imgui.SameLine(p1s); imgui.TextColored(sc,st); imgui.SameLine(p2cs); local ct=string.format("%.1f,%.1f,%.1f",i.x or 0,i.y or 0,i.z or 0); imgui.TextColored(IMAGE_PINK,ct); imgui.SameLine(p2s); imgui.TextColored(sc,st); imgui.SameLine(p3is); imgui.TextColored(IMAGE_BLUE,tostring(i.id or "?")) 
             end 
         end; imgui.EndChild()
     elseif state.active_locais_sub_tab == 2 then
@@ -1571,8 +1584,10 @@ local function draw_locais_tab()
         imgui.Separator()
 
         for _, loc in ipairs(filt_evt) do
+            local curX = imgui.GetCursorPosX()
             local lbl = string.format("##evt_%s", loc.name)
-            imgui.Selectable(lbl, false, imgui.SelectableFlags.SpanAllColumns, imgui.ImVec2(0, imgui.GetTextLineHeight()))
+            imgui.Selectable(lbl, false, imgui.SelectableFlags_SpanAllColumns, imgui.ImVec2(0, imgui.GetTextLineHeight()))
+            imgui.SetItemAllowOverlap()
             
             if imgui.BeginPopupContextItem() then
                 if imgui.Selectable("Editar Nome") then
@@ -1600,7 +1615,7 @@ local function draw_locais_tab()
             end
             if imgui.IsItemHovered() then imgui.SetTooltip("Duplo clique para ir") end
 
-            imgui.SameLine(0); imgui.Text(loc.name or "Sem Nome")
+            imgui.SameLine(curX); imgui.Text(loc.name or "Sem Nome")
             imgui.SameLine(p1s); imgui.TextColored(sc, st)
             imgui.SameLine(p2cs); imgui.TextColored(IMAGE_PINK, string.format("%.1f, %.1f, %.1f", loc.x, loc.y, loc.z))
             imgui.SameLine(p2s); imgui.TextColored(sc, st)
@@ -1748,7 +1763,7 @@ function imgui.OnDrawFrame()
     if state.window_open.v then
         local sw, sh = getScreenResolution(); imgui.SetNextWindowPos(imgui.ImVec2(sw / 2, sh / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5)); imgui.SetNextWindowSize(imgui.ImVec2(700, 500), imgui.Cond.FirstUseEver)
         
-        imgui.Begin("Painel Admin [F12] - v8.9.33", state.window_open)
+        imgui.Begin("Painel Admin [F12] - v8.9.34", state.window_open)
 
         local tabs = { {1, "Novatos"}, {2, "Online"}, {4, "Informacoes"}, {9, "Locais"}, {13, "Comandos"}, {11, "Config"} }; local btn_space = imgui.GetWindowWidth() / #tabs; local btn_w = imgui.ImVec2(math.floor(btn_space) - 5, 25); local act_bg=IMAGE_WHITE; local act_hov=imgui.ImVec4(.8,.8,.8,1); local act_txt=IMAGE_BLACK; local inact_bg=imgui.GetStyle().Colors[imgui.Col.Button]; local inact_hov=imgui.GetStyle().Colors[imgui.Col.ButtonHovered]; local inact_txt=imgui.GetStyle().Colors[imgui.Col.Text]
         for i, tab in ipairs(tabs) do local tid, tnm = tab[1], tab[2]; local is_act = state.active_tab == tid; if is_act then imgui.PushStyleColor(imgui.Col.Button,act_bg); imgui.PushStyleColor(imgui.Col.ButtonHovered,act_hov); imgui.PushStyleColor(imgui.Col.ButtonActive,act_hov); imgui.PushStyleColor(imgui.Col.Text,act_txt) else imgui.PushStyleColor(imgui.Col.Button,inact_bg); imgui.PushStyleColor(imgui.Col.ButtonHovered,inact_hov); imgui.PushStyleColor(imgui.Col.ButtonActive,inact_hov); imgui.PushStyleColor(imgui.Col.Text,inact_txt) end; if imgui.Button(tnm, btn_w) then if state.active_tab ~= tid then state.active_tab=tid end end; imgui.PopStyleColor(4); if i < #tabs then imgui.SameLine(0, 2) end end; imgui.Separator(); imgui.Text(string.format("Atualizacao: %s", os.date("%H:%M:%S"))); 
