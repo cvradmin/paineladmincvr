@@ -15,8 +15,8 @@ local u8 = function(s) return s and encoding.UTF8(s) or "" end
 
 script_name("PainelInfoHelper")
 script_author("Gerado por ChatGPT - Adaptado por Gemini")
-script_version("1.0.47")
-script_version_number(1047)
+script_version("1.0.48")
+script_version_number(1048)
 
 -- VARIAVEIS DO ADMIN ESP (INTEGRACAO)
 local esp_active = false
@@ -78,7 +78,8 @@ local cfg_default = {
         transparency = 0.98,
         admin_pass = "7N0YU3EuhT",
         bind = 123, -- F12
-        auto_cheat = false
+        auto_cheat = false,
+        check_updates = true
     },
     blacklist = {}
 }
@@ -91,6 +92,7 @@ if not cfg.main then cfg.main = cfg_default.main end
 if not cfg.main.admin_pass then cfg.main.admin_pass = cfg_default.main.admin_pass end
 if not cfg.main.bind then cfg.main.bind = 123 end
 if cfg.main.auto_cheat == nil then cfg.main.auto_cheat = false end
+if cfg.main.check_updates == nil then cfg.main.check_updates = true end
 if not cfg.main.esp_distance then cfg.main.esp_distance = 6000 end
 if not cfg.blacklist then cfg.blacklist = {} end
 
@@ -1329,6 +1331,12 @@ function imgui.OnDrawFrame()
             imgui.TextDisabled("Ajuste temas, transparencia, senha de admin e gerencie backups.")
             imgui.Spacing()
             
+            local check_upd = imgui.ImBool(cfg.main.check_updates)
+            if imgui.Checkbox("Verificar Atualizacoes ao Iniciar", check_upd) then
+                cfg.main.check_updates = check_upd.v
+                inicfg.save(cfg, "PainelInfoHelper_Config.ini")
+            end
+            
             if imgui.Button("Favoritar Tema (Salvar)", imgui.ImVec2(-1, 25)) then
                 inicfg.save(cfg, "PainelInfoHelper_Config.ini")
                 sampAddChatMessage("[PI] Tema e configuracoes salvos como favoritos!", -1)
@@ -1415,7 +1423,13 @@ function main()
     state.ip_extractor_total_buf.v = "300"
     apply_theme(saved_theme)
     sampAddChatMessage("[PainelInfoHelper] Carregado e funcional! Pressione F12.", 0x00FF00)
-    check_update()
+    
+    lua_thread.create(function()
+        wait(2000)
+        if cfg.main.check_updates then
+            check_update()
+        end
+    end)
 
     while true do wait(0)
         draw_esp_logic()
