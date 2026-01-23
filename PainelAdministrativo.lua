@@ -15,8 +15,8 @@ local u8 = function(s) return s and encoding.UTF8(s) or "" end
 
 script_name("PainelInfoHelper")
 script_author("Gerado por ChatGPT - Adaptado por Gemini")
-script_version("1.0.41")
-script_version_number(1041)
+script_version("1.0.43")
+script_version_number(1043)
 
 -- VARIAVEIS DO ADMIN ESP (INTEGRACAO)
 local esp_active = false
@@ -1047,8 +1047,8 @@ function imgui.OnDrawFrame()
                 for _,p in ipairs(list) do
                     local is_s=p.is_staff; local paused=sampIsPlayerPaused(p.id); local disp_p=p.profession or "?"; if paused then if is_s then disp_p=u8(p.profession).." (AFK)" else disp_p="AFK" end end
                     local line_lbl=string.format("##p_%d",p.id)
-                    imgui.Selectable(line_lbl, false, imgui.SelectableFlags.SpanAllColumns, imgui.ImVec2(0, imgui.GetTextLineHeight()))
-                    if imgui.BeginPopupContextItem("p_act"..p.id) then if imgui.MenuItem("CP Nick") then imgui.SetClipboardText(u8(p.nick)); sampAddChatMessage("Nick CP",0) end; if p.profession then if imgui.MenuItem("CP Info") then imgui.SetClipboardText(u8(p.profession)); sampAddChatMessage("Info CP",0) end end; imgui.Separator(); if imgui.MenuItem("Ir ID") then sampSendChat("/ir "..p.id); window_open.v=false; imgui.Process=false end; if imgui.MenuItem("Espiar ID") then sampSendChat("/espiar "..p.id); window_open.v=false; imgui.Process=false end; imgui.EndPopup() end
+                    imgui.Selectable(line_lbl, false, imgui.SelectableFlags_SpanAllColumns, imgui.ImVec2(0, imgui.GetTextLineHeight()))
+                    if imgui.BeginPopupContextItem("p_act"..p.id) then if imgui.MenuItem("CP Nick") then imgui.SetClipboardText(u8(p.nick)); sampAddChatMessage("Nick CP",0) end; if p.profession then if imgui.MenuItem("CP Info") then imgui.SetClipboardText(u8(p.profession)); sampAddChatMessage("Info CP",0) end end; imgui.Separator(); if imgui.MenuItem("Ir ID") then sampSendChat("/ir "..p.id); state.window_open.v=false; imgui.Process=false end; if imgui.MenuItem("Espiar ID") then sampSendChat("/espiar "..p.id); state.window_open.v=false; imgui.Process=false end; imgui.EndPopup() end
                     
                     local p1s=idw; local p2ns=p1s+sw+sp; local p2s=p2ns+nickw; local p3ps=p2s+sw+sp; local p3s=p3ps+profw; local p4ls=p3s+sw+sp; local p4s=p4ls+lvlw; local p5ps=p4s+sw+sp
                     imgui.SameLine(0); imgui.TextColored(p.color,tostring(p.id))
