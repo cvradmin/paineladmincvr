@@ -99,7 +99,7 @@ if not cfg.main.esp_distance then cfg.main.esp_distance = 6000 end
 if not cfg.blacklist then cfg.blacklist = {} end
 
 -- LISTA DE TEMAS ATUALIZADA
-local theme_list = {"Padrao", "Claro", "Roxo", "Vermelho", "Verde", "Laranja", "Amarelo", "Rosa", "Ciano", "Escuro", "Ajudante", "Moderador", "Administrador", "Coordenador", "Direcao", "Desenvolvedor", "Estagiario"}
+local theme_list = {"Padrao", "Claro", "Roxo", "Vermelho", "Verde", "Laranja", "Amarelo", "Rosa", "Ciano", "Escuro"}
 local key_names = {}
 for k, v in pairs(vkeys) do key_names[v] = k end
 local waiting_for_bind = false
@@ -741,25 +741,7 @@ function apply_theme(theme_name)
     style.GrabMinSize = 10.0
     style.GrabRounding = 3.0
 
-    local rank_col = rank_color_map[theme_name]
-    if rank_col then
-        if imgui.StyleColorsDark then imgui.StyleColorsDark() end
-        local r, g, b = rank_col.x, rank_col.y, rank_col.z
-        colors[clr.WindowBg] = ImVec4(r * 0.15, g * 0.15, b * 0.15, alpha)
-        colors[clr.TitleBg] = ImVec4(r * 0.4, g * 0.4, b * 0.4, 1.00)
-        colors[clr.TitleBgActive] = ImVec4(r * 0.6, g * 0.6, b * 0.6, 1.00)
-        colors[clr.Button] = ImVec4(r * 0.4, g * 0.4, b * 0.4, 0.60)
-        colors[clr.ButtonHovered] = ImVec4(r * 0.6, g * 0.6, b * 0.6, 0.80)
-        colors[clr.ButtonActive] = ImVec4(r * 0.8, g * 0.8, b * 0.8, 1.00)
-        colors[clr.CheckMark] = ImVec4(r, g, b, 1.00)
-        colors[clr.SliderGrab] = ImVec4(r, g, b, 1.00)
-        colors[clr.SliderGrabActive] = ImVec4(r, g, b, 1.00)
-        colors[clr.Header] = ImVec4(r * 0.4, g * 0.4, b * 0.4, 0.50)
-        colors[clr.HeaderHovered] = ImVec4(r * 0.6, g * 0.6, b * 0.6, 0.80)
-        colors[clr.HeaderActive] = ImVec4(r * 0.8, g * 0.8, b * 0.8, 1.00)
-        colors[clr.Separator] = ImVec4(r * 0.5, g * 0.5, b * 0.5, 0.50)
-        colors[clr.TextSelectedBg] = ImVec4(r, g, b, 0.35)
-    elseif theme_name == "Claro" then
+    if theme_name == "Claro" then
         if imgui.StyleColorsLight then imgui.StyleColorsLight() end
         colors[clr.WindowBg] = ImVec4(0.82, 0.82, 0.82, alpha) -- Fundo cinza mais suave
         colors[clr.TitleBg] = ImVec4(0.70, 0.70, 0.70, 1.00)
@@ -989,7 +971,7 @@ end
 -- NOVA FUNÇÃO DE CONFIGURAÇÃO (VISUAL)
 -- =========================================================================
 local update_history = {
-    { version = "8.9.35", date = "22/01/2026", changes = { "Adicionados temas baseados em cargos (Admin, Mod, etc).", "Correcoes no sistema de atualizacao." } },
+    { version = "8.9.35", date = "22/01/2026", changes = { "Adicionado botao manual de verificar atualizacoes na aba Config." } },
     { version = "8.9.34", date = "20/01/2026", changes = { "Adicionado /godmod automatico ao usar /pararespiar." } },
     { version = "8.9.33", date = "20/01/2026", changes = { "Adicionado icone de ajuda (?) com guia rapido das funcoes." } },
     { version = "8.9.31", date = "15/01/2026", changes = { "Refatorado o codigo para corrigir erro de 'upvalues'." } },
@@ -1102,6 +1084,10 @@ local function draw_config_tab()
     if imgui.Checkbox("Verificar Atualizacoes ao Iniciar", check_updates) then
         cfg.main.check_updates = check_updates.v
         inicfg.save(cfg, "PainelInfo_Config_v8.ini")
+    end
+
+    if imgui.Button("Verificar Atualizacoes Agora", imgui.ImVec2(-1, 25)) then
+        check_update(true)
     end
     
     if imgui.Button("Abrir Pasta de Backups", imgui.ImVec2(-1, 25)) then
@@ -1795,7 +1781,6 @@ function check_update(notify)
                 os.remove(temp_path)
                 local remote_ver = info and tonumber(info.latest_version_number)
                 local local_ver = script_ver_num
-                print(string.format("[PainelInfo] Debug Update: Local=%s Remote=%s", tostring(local_ver), tostring(remote_ver)))
                 if remote_ver and remote_ver > local_ver then
                     sampAddChatMessage("[PainelInfo] Nova versao disponivel: v" .. (info.latest_version_text or "?"), 0xFFFF00)
                     sampAddChatMessage("[PainelInfo] Acesse o GitHub para baixar a atualizacao.", 0xFFFF00)
