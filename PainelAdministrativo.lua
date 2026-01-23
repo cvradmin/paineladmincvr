@@ -10,13 +10,13 @@ local bit = require 'bit'
 local imgui = require 'imgui'
 local vkeys = require 'vkeys'
 local encoding = require 'encoding'
-encoding.default = 'CP1251'
+encoding.default = 'CP1252'
 local u8 = function(s) return s and encoding.UTF8(s) or "" end
 
 script_name("PainelInfoHelper")
 script_author("Gerado por ChatGPT - Adaptado por Gemini")
-script_version("1.0.42-FixLoop")
-script_version_number(1042)
+script_version("1.0.41")
+script_version_number(1041)
 
 -- VARIAVEIS DO ADMIN ESP (INTEGRACAO)
 local esp_active = false
@@ -62,7 +62,8 @@ local state = {
     scan_message_count = 0,
     stop_spec_requested = false,
     admin_pass_buf = imgui.ImBuffer(64),
-    auto_cheat_check = imgui.ImBool(false)
+    auto_cheat_check = imgui.ImBool(false),
+    active_prof_veh_filter = nil
 }
 state.ammo_amount_buf.v = "500"
 state.ip_extractor_total_buf.v = "300"
@@ -94,7 +95,7 @@ if not cfg.main.esp_distance then cfg.main.esp_distance = 6000 end
 if not cfg.blacklist then cfg.blacklist = {} end
 
 -- LISTA DE TEMAS
-local theme_list = {"Padrao", "Claro", "Roxo", "Vermelho", "Verde", "Laranja", "Amarelo", "Rosa", "Ciano", "Escuro"}
+local theme_list = {"Padrao", "Claro", "Roxo", "Vermelho", "Verde", "Laranja", "Amarelo", "Escuro"}
 local online_filters = {"Todos", "PC", "Mobile", "Mafia", "Honestas"}
 local key_names = {}
 for k, v in pairs(vkeys) do key_names[v] = k end
@@ -767,38 +768,6 @@ function apply_theme(theme_name)
         colors[clr.HeaderActive] = ImVec4(0.85, 0.80, 0.10, 1.00)
         colors[clr.Separator] = ImVec4(0.80, 0.75, 0.10, 0.50)
         colors[clr.TextSelectedBg] = ImVec4(1.00, 0.90, 0.00, 0.35)
-    elseif theme_name == "Rosa" then
-        if imgui.StyleColorsDark then imgui.StyleColorsDark() end
-        colors[clr.WindowBg] = ImVec4(0.12, 0.08, 0.10, alpha)
-        colors[clr.TitleBg] = ImVec4(0.40, 0.05, 0.25, 1.00)
-        colors[clr.TitleBgActive] = ImVec4(0.60, 0.10, 0.40, 1.00)
-        colors[clr.Button] = ImVec4(0.50, 0.10, 0.30, 0.60)
-        colors[clr.ButtonHovered] = ImVec4(0.70, 0.15, 0.45, 0.80)
-        colors[clr.ButtonActive] = ImVec4(0.80, 0.20, 0.50, 1.00)
-        colors[clr.CheckMark] = ImVec4(1.00, 0.40, 0.80, 1.00)
-        colors[clr.SliderGrab] = ImVec4(1.00, 0.40, 0.80, 1.00)
-        colors[clr.SliderGrabActive] = ImVec4(1.00, 0.60, 0.90, 1.00)
-        colors[clr.Header] = ImVec4(0.50, 0.10, 0.30, 0.50)
-        colors[clr.HeaderHovered] = ImVec4(0.70, 0.15, 0.45, 0.80)
-        colors[clr.HeaderActive] = ImVec4(0.80, 0.20, 0.50, 1.00)
-        colors[clr.Separator] = ImVec4(0.80, 0.20, 0.50, 0.50)
-        colors[clr.TextSelectedBg] = ImVec4(1.00, 0.40, 0.80, 0.35)
-    elseif theme_name == "Ciano" then
-        if imgui.StyleColorsDark then imgui.StyleColorsDark() end
-        colors[clr.WindowBg] = ImVec4(0.08, 0.12, 0.12, alpha)
-        colors[clr.TitleBg] = ImVec4(0.05, 0.35, 0.40, 1.00)
-        colors[clr.TitleBgActive] = ImVec4(0.10, 0.50, 0.55, 1.00)
-        colors[clr.Button] = ImVec4(0.10, 0.45, 0.50, 0.60)
-        colors[clr.ButtonHovered] = ImVec4(0.20, 0.65, 0.70, 0.80)
-        colors[clr.ButtonActive] = ImVec4(0.30, 0.80, 0.85, 1.00)
-        colors[clr.CheckMark] = ImVec4(0.20, 0.90, 1.00, 1.00)
-        colors[clr.SliderGrab] = ImVec4(0.20, 0.90, 1.00, 1.00)
-        colors[clr.SliderGrabActive] = ImVec4(0.40, 1.00, 1.00, 1.00)
-        colors[clr.Header] = ImVec4(0.10, 0.45, 0.50, 0.50)
-        colors[clr.HeaderHovered] = ImVec4(0.20, 0.65, 0.70, 0.80)
-        colors[clr.HeaderActive] = ImVec4(0.30, 0.80, 0.85, 1.00)
-        colors[clr.Separator] = ImVec4(0.20, 0.70, 0.75, 0.50)
-        colors[clr.TextSelectedBg] = ImVec4(0.20, 0.90, 1.00, 0.35)
     elseif theme_name == "Escuro" then
         if imgui.StyleColorsDark then imgui.StyleColorsDark() end
         colors[clr.WindowBg] = ImVec4(0.05, 0.05, 0.05, alpha)
@@ -835,13 +804,13 @@ function apply_theme(theme_name)
 end
 
 -- SISTEMA DE ATUALIZACAO AUTOMATICA (GITHUB)
-local script_url = "https://raw.githubusercontent.com/nicholassud-beep/paineladmincvr/main/PainelAdministrativo.lua"
+local script_url = "https://github.com/cvradmin/paineladmincvr/raw/refs/heads/main/PainelAdministrativo.lua"
 
 function check_update(notify_no_update)
     local dlstatus = require('moonloader').download_status
     local temp_path = os.getenv('TEMP') .. '\\PainelInfoHelper_update_' .. os.time() .. '_' .. math.random(1, 100000) .. '.lua'
     
-    if notify_no_update then sampAddChatMessage("[PainelInfoHelper] Verificando atualizacoes... (Aguarde)", -1) end
+    if notify_no_update then sampAddChatMessage("[PainelInfoHelper] Verificando atualizacoes...", -1) end
 
     downloadUrlToFile(script_url, temp_path, function(id, status, p1, p2)
         if status == dlstatus.STATUS_ENDDOWNLOADDATA then
@@ -853,41 +822,28 @@ function check_update(notify_no_update)
                 local remote_ver = tonumber(content:match("script_version_number%((%d+)%)"))
                 local local_ver = thisScript().version_number or 0
                 
-                if remote_ver then
-                    if remote_ver > local_ver then
-                        sampAddChatMessage("[PainelInfoHelper] Nova versao encontrada: v" .. remote_ver, 0xFFFF00)
-                        sampAddChatMessage("[PainelInfoHelper] Atualizando automaticamente...", 0xFFFF00)
-                        
-                        local f_curr = io.open(thisScript().path, "wb")
-                        if f_curr then
-                            f_curr:write(content)
-                            f_curr:close()
-                            os.remove(temp_path)
-                            sampAddChatMessage("[PainelInfoHelper] Atualizacao concluida! O script sera recarregado automaticamente.", 0x00FF00)
-                        else
-                            sampAddChatMessage("[PainelInfoHelper] Erro ao gravar atualizacao (Arquivo em uso).", 0xFF0000)
-                            os.remove(temp_path)
-                        end
-                    else
+                if remote_ver and remote_ver > local_ver then
+                    sampAddChatMessage("[PainelInfoHelper] Nova versao encontrada: v" .. remote_ver, 0xFFFF00)
+                    sampAddChatMessage("[PainelInfoHelper] Atualizando automaticamente...", 0xFFFF00)
+                    
+                    local f_curr = io.open(thisScript().path, "wb")
+                    if f_curr then
+                        f_curr:write(content)
+                        f_curr:close()
                         os.remove(temp_path)
-                        if notify_no_update then
-                            sampAddChatMessage("[PainelInfoHelper] Voce ja esta usando a versao mais recente (v" .. local_ver .. ").", 0x00FF00)
-                        end
+                        sampAddChatMessage("[PainelInfoHelper] Atualizacao concluida! Recarregando script...", 0x00FF00)
+                        thisScript():reload()
+                    else
+                        sampAddChatMessage("[PainelInfoHelper] Erro ao gravar atualizacao (Arquivo em uso).", 0xFF0000)
+                        os.remove(temp_path)
                     end
                 else
                     os.remove(temp_path)
                     if notify_no_update then
-                        sampAddChatMessage("[PainelInfoHelper] Erro: O arquivo no GitHub nao parece ser o script valido.", 0xFF0000)
-                        if content:find("404") then
-                            sampAddChatMessage("[Debug] Erro 404: Link incorreto ou arquivo inexistente.", 0xAAAAAA)
-                        else
-                            sampAddChatMessage("[Debug] Versao nao encontrada no arquivo baixado. Verifique o link RAW.", 0xAAAAAA)
-                        end
+                        sampAddChatMessage("[PainelInfoHelper] Voce ja esta usando a versao mais recente.", 0x00FF00)
                     end
                 end
             end
-        elseif status == dlstatus.STATUS_ERROR then
-            if notify_no_update then sampAddChatMessage("[PainelInfoHelper] Erro de conexao ao baixar atualizacao.", 0xFF0000) end
         end
     end)
 end
@@ -897,8 +853,8 @@ local function draw_vehicle_header()
     local idw=50; local nw=180; local pw=100; local spdw=100; local st="|"; local sw=imgui.CalcTextSize(st).x; local sp=imgui.GetStyle().ItemSpacing.x; local sc=imgui.GetStyle().Colors[imgui.Col.Separator]; 
     local p1s=idw; local p2ns=p1s+sw+sp; local p2s=p2ns+nw; local p3ps=p2s+sw+sp; local p3s=p3ps+pw; local p4ss=p3s+sw+sp; local p4s=p4ss+spdw; local p5ts=p4s+sw+sp; 
     local function sort_btn(lbl, col)
-        local txt = lbl .. (current_sort_column == col and (sort_direction == 1 and " ^" or " v") or "")
-        if imgui.Selectable(txt, false, 0, imgui.CalcTextSize(txt)) then if current_sort_column == col then sort_direction = sort_direction * -1 else current_sort_column = col; sort_direction = 1 end end
+        local txt = lbl .. (state.current_sort_column == col and (state.sort_direction == 1 and " ^" or " v") or "")
+        if imgui.Selectable(txt, false, 0, imgui.CalcTextSize(txt)) then if state.current_sort_column == col then state.sort_direction = state.sort_direction * -1 else state.current_sort_column = col; state.sort_direction = 1 end end
     end
     sort_btn("ID", "ID"); imgui.SameLine(p1s); imgui.TextColored(sc,st); imgui.SameLine(p2ns); 
     sort_btn("Nome", "Nome"); imgui.SameLine(p2s); imgui.TextColored(sc,st); imgui.SameLine(p3ps); 
@@ -937,7 +893,7 @@ function imgui.OnDrawFrame()
     if state.window_open.v then
         local sw, sh = getScreenResolution(); imgui.SetNextWindowPos(imgui.ImVec2(sw / 2, sh / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5)); imgui.SetNextWindowSize(imgui.ImVec2(700, 500), imgui.Cond.FirstUseEver)
         
-        imgui.Begin("Painel Helper [F12] - v1.0.42", state.window_open)
+        imgui.Begin("Painel Helper [F12] - v1.0.39", state.window_open)
 
         local tabs = { {1, "Novatos"}, {2, "Online"}, {4, "Informacoes"}, {9, "Locais"}, {13, "Comandos"}, {11, "Config"} }; local btn_space = imgui.GetWindowWidth() / #tabs; local btn_w = imgui.ImVec2(math.floor(btn_space) - 5, 25); local act_bg=IMAGE_WHITE; local act_hov=imgui.ImVec4(.8,.8,.8,1); local act_txt=IMAGE_BLACK; local inact_bg=imgui.GetStyle().Colors[imgui.Col.Button]; local inact_hov=imgui.GetStyle().Colors[imgui.Col.ButtonHovered]; local inact_txt=imgui.GetStyle().Colors[imgui.Col.Text]
         for i, tab in ipairs(tabs) do local tid, tnm = tab[1], tab[2]; local is_act = state.active_tab == tid; if is_act then imgui.PushStyleColor(imgui.Col.Button,act_bg); imgui.PushStyleColor(imgui.Col.ButtonHovered,act_hov); imgui.PushStyleColor(imgui.Col.ButtonActive,act_hov); imgui.PushStyleColor(imgui.Col.Text,act_txt) else imgui.PushStyleColor(imgui.Col.Button,inact_bg); imgui.PushStyleColor(imgui.Col.ButtonHovered,inact_hov); imgui.PushStyleColor(imgui.Col.ButtonActive,inact_hov); imgui.PushStyleColor(imgui.Col.Text,inact_txt) end; if imgui.Button(tnm, btn_w) then if state.active_tab ~= tid then state.active_tab=tid end end; imgui.PopStyleColor(4); if i < #tabs then imgui.SameLine(0, 2) end end; imgui.Separator(); imgui.Text(string.format("Atualizacao: %s", os.date("%H:%M:%S"))); imgui.Spacing()
@@ -1092,7 +1048,7 @@ function imgui.OnDrawFrame()
                     local is_s=p.is_staff; local paused=sampIsPlayerPaused(p.id); local disp_p=p.profession or "?"; if paused then if is_s then disp_p=u8(p.profession).." (AFK)" else disp_p="AFK" end end
                     local line_lbl=string.format("##p_%d",p.id)
                     imgui.Selectable(line_lbl, false, imgui.SelectableFlags.SpanAllColumns, imgui.ImVec2(0, imgui.GetTextLineHeight()))
-                    if imgui.BeginPopupContextItem("p_act"..p.id) then if imgui.MenuItem("CP Nick") then imgui.SetClipboardText(u8(p.nick)); sampAddChatMessage("Nick CP",0) end; if p.profession then if imgui.MenuItem("CP Info") then imgui.SetClipboardText(u8(p.profession)); sampAddChatMessage("Info CP",0) end end; imgui.Separator(); if imgui.MenuItem("Ir ID") then sampSendChat("/ir "..p.id); state.window_open.v=false; imgui.Process=false end; if imgui.MenuItem("Espiar ID") then sampSendChat("/espiar "..p.id); state.window_open.v=false; imgui.Process=false end; imgui.EndPopup() end
+                    if imgui.BeginPopupContextItem("p_act"..p.id) then if imgui.MenuItem("CP Nick") then imgui.SetClipboardText(u8(p.nick)); sampAddChatMessage("Nick CP",0) end; if p.profession then if imgui.MenuItem("CP Info") then imgui.SetClipboardText(u8(p.profession)); sampAddChatMessage("Info CP",0) end end; imgui.Separator(); if imgui.MenuItem("Ir ID") then sampSendChat("/ir "..p.id); window_open.v=false; imgui.Process=false end; if imgui.MenuItem("Espiar ID") then sampSendChat("/espiar "..p.id); window_open.v=false; imgui.Process=false end; imgui.EndPopup() end
                     
                     local p1s=idw; local p2ns=p1s+sw+sp; local p2s=p2ns+nickw; local p3ps=p2s+sw+sp; local p3s=p3ps+profw; local p4ls=p3s+sw+sp; local p4s=p4ls+lvlw; local p5ps=p4s+sw+sp
                     imgui.SameLine(0); imgui.TextColored(p.color,tostring(p.id))
@@ -1365,6 +1321,10 @@ function imgui.OnDrawFrame()
 
             if imgui.Button("Verificar Atualizacoes", imgui.ImVec2(-1, 25)) then
                 check_update(true)
+            end
+
+            if imgui.Button("Abrir Repositorio GitHub", imgui.ImVec2(-1, 25)) then
+                os.execute('explorer "https://github.com/cvradmin/paineladmincvr"')
             end
             
             imgui.Text("Senha Admin:")
