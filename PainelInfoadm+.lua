@@ -15,8 +15,8 @@ local u8 = function(s) return s and encoding.UTF8(s) or "" end
 
 script_name("PainelInfo")
 script_author("Gerado por ChatGPT (GPT-5 Thinking mini) - Consolidado e Corrigido por Gemini")
-script_version("8.9.42")
-local script_ver_num = 8942
+script_version("8.9.45")
+local script_ver_num = 8945
 script_version_number(script_ver_num)
 
 -- VARIAVEIS DO ADMIN ESP (INTEGRACAO)
@@ -608,6 +608,29 @@ function sampev.onServerMessage(color, text)
 end
 
 function sampev.onShowDialog(id, style, title, button1, button2, text)
+    if ip_extractor_active then
+        local content = (text or "") .. " " .. (title or "")
+        local ip = content:match("(%d+%.%d+%.%d+%.%d+)")
+        if ip then
+            local log_text = "Dialog: " .. (title or "") .. " " .. (text or "")
+            local p_info = nil
+            if #ip_req_queue > 0 then
+                local info = table.remove(ip_req_queue, 1)
+                if info then
+                    p_info = info
+                    state.player_ips[info.id] = {ip = ip, nick = info.name}
+                    log_text = string.format("Nick: %s (ID: %d) | %s", info.name, info.id, log_text)
+                end
+            end
+            logFoundIP(log_text)
+            if state.ip_extractor_check_dupes.v then
+                if not extracted_ips[ip] then extracted_ips[ip] = {} end
+                table.insert(extracted_ips[ip], { txt = log_text, info = p_info })
+            end
+        end
+        return false
+    end
+
     if state.device_scanner_active then
         local content = strip_colors((title or "") .. " " .. (text or "")):lower()
         local detected = nil
@@ -1014,6 +1037,9 @@ end
 -- NOVA FUNÇÃO DE CONFIGURAÇÃO (VISUAL)
 -- =========================================================================
 local update_history = {
+    { version = "8.9.45", date = "25/01/2026", changes = { "Extrator de IPs agora fecha TODAS as janelas automaticamente." } },
+    { version = "8.9.44", date = "25/01/2026", changes = { "Extrator de IPs agora mantem a ultima janela aberta (para conferencia)." } },
+    { version = "8.9.43", date = "25/01/2026", changes = { "Bloqueio automatico de dialogos durante o scan de IP e Dispositivos." } },
     { version = "8.9.42", date = "25/01/2026", changes = { "Adicionada opcao 'Copiar IP' no menu de contexto do jogador (se o IP estiver visivel)." } },
     { version = "8.9.41", date = "25/01/2026", changes = { "Ajuste na largura da coluna Ping para nao sobrepor o IP." } },
     { version = "8.9.40", date = "25/01/2026", changes = { "Ajuste na largura das colunas para exibir IP corretamente." } },
