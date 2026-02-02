@@ -15,8 +15,8 @@ local u8 = function(s) return s and encoding.UTF8(s) or "" end
 
 script_name("PainelInfo")
 script_author("Gerado por ChatGPT (GPT-5 Thinking mini) - Consolidado e Corrigido por Gemini")
-script_version("8.9.45")
-local script_ver_num = 8945
+script_version("8.9.53")
+local script_ver_num = 8953
 script_version_number(script_ver_num)
 
 -- VARIAVEIS DO ADMIN ESP (INTEGRACAO)
@@ -287,7 +287,20 @@ load_events()
 
 -- LISTA DE DUVIDAS (FAQ) - Preencha aqui
 local faq_list = {
-    { q = "Quais motivos contam para nível de denuncia?", a = "Motivos que adiciona um ponto no nível de denuncia:\n\nD.B - Drive By\nA.R - Anti RPG\nA.J - Anti Jogo\nA.T - Atrapalhando Trabalhador\n\nTodos os motivos acima contam para o nível de denuncia, porém apenas ao ser preso pelo motivo D.F Denuncia Fórum acrescenta o tempo a mais.\n\nOu seja, caso ele tenha nível 1 de denuncia, e seja preso por um dos motivos acima, não receberá os 200 minutos a mais. Ele só irá receber os 200 minutos a mais caso seja preso por D.F.\n\nMotivos que removem da contagem de nível de denúncia caso use o comando de despunição:\n\nD.B - Drive By\nD.F - Denúncia no Fórum\nA.R - Anti RPG\nA.J - Anti Jogo\nA.T - Atrapalhando Trabalhador" },
+    { q = "Tabela de Tempos de Prisao (Regras)", a = "V.A (Veiculo Agencia): 50 min\nD.M (Death Match): 30-40 min\nD.B (Drive By): 50 min\nD.R (Desrespeito): 30-50 min\nA.R (Anti-RPG): 40 min\nA.J (Anti-Jogo): 40 min\nD.V (Divulgacao): 60 min a Ban\nP.D (Proibicoes): 30-40 min\nA.T (Atrapalhar Trab.): 50-70 min\nMUC (Mau Uso Cmd): 40 min\nA.A (Atacar Aviao): 80-100 min\nC.L (Caps Lock): 20 min\nVLP (Veic Local Proibido): 80 min\nMOV (Msg Ofensiva Veic): 80 min" },
+    { q = "Regras: Banimentos e Infracoes Graves", a = "Ofensa a Staff: Ban Permanente\nRacismo: 200m -> 5d -> 10d -> Perm\nCheater/Cumplice: Ban 16 dias (temp) ou Perm\nConta Fake com Propriedade: Ban 16 dias\nFree Kill em Favela/Base: Ban 16 dias\nExplosivos em Interiores: 3 a 10 dias\nMod Proibido (Arvores/Postes): 2d -> 5d -> Perm" },
+    { q = "Regras: Matar Novatos (Lvl < 10)", a = "Terroristas/Assassinos: 150 min -> 2 dias\nOutras Profissoes: 100 min -> 150 min" },
+    { q = "Cooldowns (Tempos de Espera)", a = "Taxi: 30s | Uber: 64s\nParamedico: 15s (Vacina: 40s)\nMecanico/Vendedor: 40s\nOLX: 50s\n/Transferir: 4 min (Max $1.000)\nRespawn Veiculo Casa: 5 min\nSair de Suspeitos: 15 min\nReparo Caixa Eletronico: 15 min\nPix / Contrato / Trocar Profissao: 30 min\nAssalto Banco: 1h\nAssalto Player/Caixa: A cada UP de XP\nMercadoria Empresa: A cada UP de Level\nLoteria: 1h\nVender Casa apos compra: 5 dias\nRecontratar funcionario: 3h\n/Arrombarporta: 3 min\nCodigo Senha/Email: 20 min" },
+    { q = "Investimentos (Banco)", a = "1M-5M: 0.002% (Saque 720 lvls)\n5M-10M: 0.004% (Saque 2160 lvls)\n10M-15M: 0.006% (Saque 4320 lvls)\n15M+: 0.008% (Saque 8760 lvls)\nTaxa de saque antecipado: 20% sobre o valor investido." },
+    { q = "Valores das Habilitacoes", a = "Moto: $2.000\nCarro: $3.500\nCaminhao: $6.000\nOnibus: $8.000\nCarreta: $10.000\nBarco: $25.000\nHeli: $150.000\nAviao: $200.000\nRenovacao: 50% do valor." },
+    { q = "Precos Mecanico (Tabelado)", a = "Reparo: $2.500 - $4.000\nLataria: $1.200 - $3.000\nPneu: $600 - $1.000\nKit Reparo: $2.000 - $3.000 (Conveniencia: $4.800)" },
+    { q = "Bases e Empresas", a = "Mini Base: $300k + 30k Coins (30 membros). Sem veiculos/DM.\nBase Grande: $500k + 50k Coins (50 membros). Com veiculos/DM.\nRenovacao: 30d (40k coins) a 120d (160k coins).\nDeposito maximo no cofre: $100k a cada 30min.\nLucro Dono Empresa: 0.1% do valor padrao por entrega." },
+    { q = "Requisitos de Prisoes (Policia/Gov)", a = "PM: 100 | Civil: 200 | Delegado: 300\nPRE: 400 | PRF: 500 | PF: 600\nMarinha: 750 | Exercito: 900 | Aero: 1050\nCorregedoria: 1250" },
+    { q = "Multas e CNH", a = "Perde CNH com: 21 multas.\nValores Multa: Moto $300, Carro $350, Caminhao $400, Onibus $450, Carreta $500." },
+    { q = "Assalto ao Banco", a = "Porta do cofre fica aberta por: 2 minutos\nLaser do cofre volta em: 4 minutos\nTempo para abrir com /abrircofre: 30 segundos\nCooldown geral: 1 hora" },
+    { q = "Regras e Sistemas Diversos", a = "Porte de Armas: Level 10\nAssalto (Vitima): Level 20+\nTop Kills: /topskill\nCores ID: /coresid\nPrisoes: /topprisoes\nMax Estrelas: 500 (3 min cada)\nParabens Level: 100, 500, 1000, 2k, 3k, 4k, 5k+" },
+    { q = "Veiculos com Paintjob", a = "Sultan, Slamvan, Camper, Remington, Blade, Uranus, Jester, Stratum, Elegy, Flash, Savanna, Broadway, Tornado" },
+    { q = "Denuncias e Punicoes", a = "Motivos que contam nivel de denuncia: D.B, A.R, A.J, A.T.\nD.F (Denuncia Forum) acrescenta tempo extra.\nMotivos que removem na despunicao: D.B, D.F, A.R, A.J, A.T." },
 }
 
 -- DETECCAO POR COR
@@ -298,6 +311,19 @@ local function convert_samp_color(argb)
     local b = bit.band(argb, 0xFF)
     return imgui.ImVec4(r / 255, g / 255, b / 255, 1.0)
 end
+
+local function remove_accents(str)
+    if not str then return "" end
+    local s = str:lower()
+    s = s:gsub("[\224\225\226\227]", "a") -- áàâã
+    s = s:gsub("[\232\233\234]", "e")     -- éê
+    s = s:gsub("[\236\237]", "i")         -- í
+    s = s:gsub("[\242\243\244\245]", "o") -- óôõ
+    s = s:gsub("[\249\250]", "u")         -- ú
+    s = s:gsub("[\231]", "c")             -- ç
+    return s
+end
+
 local function extract_rgb(argb)
     local r = bit.band(bit.rshift(argb, 16), 0xFF)
     local g = bit.band(bit.rshift(argb, 8), 0xFF)
@@ -428,10 +454,10 @@ end
 -- FUNÇÕES DE FILTRAGEM
 local function filter_professions(l, t)
     local f = {}
-    local tl = t:lower()
+    local tl = t -- Ja vem normalizado
     local tn = tonumber(t)
     for _, p in ipairs(l) do
-        local nl = (p.name or ""):lower()
+        local nl = remove_accents(p.name or "")
         local lvln = p.level or 0
         local lvls = tostring(lvln)
         local saln = p.salary or 0
@@ -446,11 +472,11 @@ end
 
 local function filter_vehicles(l, t, scol, sdir, type_filter)
     local f = {}
-    local tl = t:lower()
+    local tl = t -- Ja vem normalizado
     for _, v in ipairs(l) do
         local ids = tostring(v.id or "")
-        local nl = (v.name or ""):lower()
-        local typl = (v.type or ""):lower()
+        local nl = remove_accents(v.name or "")
+        local typl = remove_accents(v.type or "")
         local ps = tostring(v.price or "")
         local sps = tostring(v.speed or "")
         
@@ -494,12 +520,12 @@ end
 -- =========================================================================
 local function filter_skins(t)
     local f = {}
-    local tl = t:lower()
+    local tl = t -- Ja vem normalizado
     
     -- Itera a lista principal de skins (skins_list) diretamente
     for _, s in ipairs(skins_list) do
         local id_str = tostring(s.id)
-        local name_lower = (s.name or ""):lower()
+        local name_lower = remove_accents(s.name or "")
         
         -- Verifica se o ID (string) ou o Nome (lowercase) batem com a busca
         if (id_str:find(tl, 1, true) or name_lower:find(tl, 1, true)) then
@@ -519,11 +545,11 @@ end
 
 local function filter_weapons(l, t, type_filter)
     local f = {}
-    local tl = t:lower()
+    local tl = t -- Ja vem normalizado
     for _, w in ipairs(l) do
         local ids = tostring(w.id or "")
-        local nl = (w.name or ""):lower()
-        local typl = (w.type or ""):lower()
+        local nl = remove_accents(w.name or "")
+        local typl = remove_accents(w.type or "")
         
         local type_match = true
         if type_filter and type_filter ~= "Todas" then
@@ -540,9 +566,9 @@ end
 
 local function filter_interiors(l, t)
     local f = {}
-    local tl = t:lower()
+    local tl = t -- Ja vem normalizado
     for _, i in ipairs(l) do
-        local nl = (i.name or ""):lower()
+        local nl = remove_accents(i.name or "")
         local ids = tostring(i.id or "")
         local xs = string.format("%.1f", i.x or 0)
         local ys = string.format("%.1f", i.y or 0)
@@ -759,6 +785,7 @@ function sampev.onTogglePlayerSpectating(toggle)
     elseif state.stop_spec_requested then
         state.stop_spec_requested = false
         lua_thread.create(function() wait(500) sampSendChat("/godmod") end)
+        -- lua_thread.create(function() wait(500) sampSendChat("/godmod") end)
     end
 end
 
@@ -1037,6 +1064,12 @@ end
 -- NOVA FUNÇÃO DE CONFIGURAÇÃO (VISUAL)
 -- =========================================================================
 local update_history = {
+    { version = "8.9.53", date = "01/02/2026", changes = { "Respostas do FAQ agora sao selecionaveis (para copiar partes)." } },
+    { version = "8.9.52", date = "01/02/2026", changes = { "Adicionado botao 'Copiar' para respostas do FAQ." } },
+    { version = "8.9.51", date = "01/02/2026", changes = { "Adicionada Tabela de Tempos de Prisao e Regras de Banimento.", "Atualizados Cooldowns e Requisitos de Policia." } },
+    { version = "8.9.50", date = "01/02/2026", changes = { "Unificadas informacoes de todos os Chats (Regras, Mods, Economia e Cooldowns)." } },
+    { version = "8.9.49", date = "01/02/2026", changes = { "Atualizada lista de FAQ com todas as informacoes do Chat HTML (Cooldowns, Economia, Regras)." } },
+    { version = "8.9.46", date = "01/02/2026", changes = { "Busca agora ignora acentos (Ex: 'policia' acha 'Polícia').", "Adicionada barra de pesquisa na aba Duvidas (FAQ)." } },
     { version = "8.9.45", date = "25/01/2026", changes = { "Extrator de IPs agora fecha TODAS as janelas automaticamente." } },
     { version = "8.9.44", date = "25/01/2026", changes = { "Extrator de IPs agora mantem a ultima janela aberta (para conferencia)." } },
     { version = "8.9.43", date = "25/01/2026", changes = { "Bloqueio automatico de dialogos durante o scan de IP e Dispositivos." } },
@@ -1091,12 +1124,30 @@ local function draw_faq_tab()
     imgui.TextColored(IMAGE_GREEN, "Duvidas e FAQ"); imgui.Separator()
     imgui.BeginChild("DuvidasFAQ", imgui.ImVec2(0,0), true)
     
+    local search_term = remove_accents(state.search_text.v)
+    
     if imgui.CollapsingHeader("Perguntas Frequentes") then
         imgui.Spacing()
-        for _, item in ipairs(faq_list) do
-            if imgui.CollapsingHeader(u8(item.q)) then
-                imgui.TextWrapped(u8(item.a))
-                imgui.Spacing()
+        for i, item in ipairs(faq_list) do
+            local q_norm = remove_accents(item.q)
+            local a_norm = remove_accents(item.a)
+            if search_term == "" or q_norm:find(search_term, 1, true) or a_norm:find(search_term, 1, true) then
+                if imgui.CollapsingHeader(u8(item.q)) then
+                    if not item.buf then
+                        item.buf = imgui.ImBuffer(u8(item.a), #item.a + 1024)
+                    end
+                    local width = imgui.GetWindowWidth() - 50
+                    local text_size = imgui.CalcTextSize(u8(item.a), false, width)
+                    local height = text_size.y + 30
+                    if height < 60 then height = 60 end
+                    if height > 300 then height = 300 end
+                    imgui.InputTextMultiline("##ans_"..i, item.buf, imgui.ImVec2(-1, height), imgui.InputTextFlags.ReadOnly)
+                    if imgui.Button("Copiar Tudo##faq_"..i) then
+                        imgui.SetClipboardText(u8(item.a))
+                        sampAddChatMessage("[PI] Resposta copiada para a area de transferencia.", -1)
+                    end
+                    imgui.Spacing()
+                end
             end
         end
         imgui.Spacing()
@@ -1256,8 +1307,8 @@ local function draw_players_tab()
     else
         imgui.TextDisabled("Lista de todos os jogadores online. Staff no topo. Botao direito para opcoes.")
     end
-    local search_u8 = u8(state.search_text.v):lower(); local search_cp = string.lower(state.search_text.v)
-    for i=0,maxid do if sampIsPlayerConnected(i) then local nick=sampGetPlayerNickname(i); if nick and #nick>0 then local rank=staff_nick_to_rank_map[string.lower(nick)]; if not rank then local s,n=pcall(encoding.CP1251,nick); if s and n then rank=staff_nick_to_rank_map[string.lower(n)] end end; local ping=sampGetPlayerPing(i) or 0; local score=sampGetPlayerScore(i) or 0; local color; local prof; if rank then color=get_rank_color(rank); prof=get_display_rank(rank) else local argb=sampGetPlayerColor(i); color=convert_samp_color(argb); prof=get_closest_profession_name(argb) end; local pdata={id=i,nick=nick,rank=rank,color=color,is_staff=rank~=nil,Level=score,Ping=ping,profession=prof}; local paused=sampIsPlayerPaused(i) or false; local passes=(is_on) or (is_nov and pdata.Level<12 and not paused); if passes then local prof_u8=u8(pdata.profession or ""):lower(); local nick_u8=u8(nick):lower(); local id_s=tostring(i); local m_txt=nick_u8:find(search_u8,1,true) or prof_u8:find(search_u8,1,true); local m_id=id_s:find(search_cp,1,true); if m_txt or m_id then table.insert(data,pdata); if is_on then if pdata.is_staff then table.insert(staff,pdata) else table.insert(players,pdata) end else table.insert(players,pdata) end end; cnt=cnt+1 end end end end
+    local search_norm = remove_accents(state.search_text.v)
+    for i=0,maxid do if sampIsPlayerConnected(i) then local nick=sampGetPlayerNickname(i); if nick and #nick>0 then local rank=staff_nick_to_rank_map[string.lower(nick)]; if not rank then local s,n=pcall(encoding.CP1251,nick); if s and n then rank=staff_nick_to_rank_map[string.lower(n)] end end; local ping=sampGetPlayerPing(i) or 0; local score=sampGetPlayerScore(i) or 0; local color; local prof; if rank then color=get_rank_color(rank); prof=get_display_rank(rank) else local argb=sampGetPlayerColor(i); color=convert_samp_color(argb); prof=get_closest_profession_name(argb) end; local pdata={id=i,nick=nick,rank=rank,color=color,is_staff=rank~=nil,Level=score,Ping=ping,profession=prof}; local paused=sampIsPlayerPaused(i) or false; local passes=(is_on) or (is_nov and pdata.Level<12 and not paused); if passes then local prof_norm=remove_accents(pdata.profession or ""); local nick_norm=remove_accents(nick); local id_s=tostring(i); local m_txt=nick_norm:find(search_norm,1,true) or prof_norm:find(search_norm,1,true); local m_id=id_s:find(search_norm,1,true); if m_txt or m_id then table.insert(data,pdata); if is_on then if pdata.is_staff then table.insert(staff,pdata) else table.insert(players,pdata) end else table.insert(players,pdata) end end; cnt=cnt+1 end end end end
     
     local total_pc = 0; local total_mobile = 0; local total_mafia = 0; local total_honest = 0
     for _, p in ipairs(data) do
@@ -1385,7 +1436,7 @@ local function draw_players_tab()
 end
 
 local function draw_info_tab()
-    local search_u8 = u8(state.search_text.v):lower(); local search_cp = string.lower(state.search_text.v)
+    local search_norm = remove_accents(state.search_text.v)
     local sub_tabs={{1,"Profissões"},{2,"Veículos"},{3,"Skins"},{4,"Armas"},{5,"Dúvidas"}}; local sub_space=(imgui.GetWindowWidth()-25)/#sub_tabs; local sub_btn_w=imgui.ImVec2(math.floor(sub_space)-5,22); local act_bg=IMAGE_WHITE; local act_hov=imgui.ImVec4(.8,.8,.8,1); local act_txt=IMAGE_BLACK; local inact_bg=imgui.GetStyle().Colors[imgui.Col.Button]; local inact_hov=imgui.GetStyle().Colors[imgui.Col.ButtonHovered]; local inact_txt=imgui.GetStyle().Colors[imgui.Col.Text]
     for i,sub in ipairs(sub_tabs) do local sid,snm=sub[1],sub[2]; local is_act=state.active_info_sub_tab==sid; if is_act then imgui.PushStyleColor(imgui.Col.Button,act_bg); imgui.PushStyleColor(imgui.Col.ButtonHovered,act_hov); imgui.PushStyleColor(imgui.Col.ButtonActive,act_hov); imgui.PushStyleColor(imgui.Col.Text,act_txt) else imgui.PushStyleColor(imgui.Col.Button,inact_bg); imgui.PushStyleColor(imgui.Col.ButtonHovered,inact_hov); imgui.PushStyleColor(imgui.Col.ButtonActive,inact_hov); imgui.PushStyleColor(imgui.Col.Text,inact_txt) end; if imgui.Button(snm,sub_btn_w) then state.active_info_sub_tab=sid end; imgui.PopStyleColor(4); if i<#sub_tabs then imgui.SameLine(0,2) end end; imgui.Spacing(); imgui.Separator()
     if state.active_info_sub_tab==3 or state.active_info_sub_tab==4 then imgui.Text("Aplicar em:"); imgui.SameLine(); imgui.PushItemWidth(80); imgui.InputText("ID##TargetID",state.target_id_buf); imgui.PopItemWidth(); imgui.SameLine(); if imgui.Button("Eu") then local _,mid=sampGetPlayerIdByCharHandle(PLAYER_PED); state.target_id_buf.v=tostring(mid) end; if state.active_info_sub_tab==4 then imgui.SameLine(); imgui.Text("Munição:"); imgui.SameLine(); imgui.PushItemWidth(80); imgui.InputText("##AmmoAmount",state.ammo_amount_buf); imgui.PopItemWidth() end; imgui.Spacing() end
@@ -1397,7 +1448,7 @@ local function draw_info_tab()
         imgui.PopItemWidth()
         imgui.SameLine()
         local selected_prof_type = prof_types[state.prof_type_filter_idx.v + 1]
-        imgui.TextColored(IMAGE_GREEN,"Profissões:"); imgui.Separator(); local filt_p=filter_professions(professions,search_cp); local cnt=#filt_p; local leg,maf={}, {}; for _,p in ipairs(filt_p) do if p.type=="Mafia" then table.insert(maf,p) else table.insert(leg,p) end end; imgui.Text("Encontradas: "..cnt); imgui.Separator(); imgui.BeginChild("ProfListInfo",imgui.ImVec2(0,0),true); draw_profession_header(); 
+        imgui.TextColored(IMAGE_GREEN,"Profissões:"); imgui.Separator(); local filt_p=filter_professions(professions,search_norm); local cnt=#filt_p; local leg,maf={}, {}; for _,p in ipairs(filt_p) do if p.type=="Mafia" then table.insert(maf,p) else table.insert(leg,p) end end; imgui.Text("Encontradas: "..cnt); imgui.Separator(); imgui.BeginChild("ProfListInfo",imgui.ImVec2(0,0),true); draw_profession_header(); 
         local function rend_p(l,h,c) 
             if #l>0 then 
                 imgui.TextColored(c,h); imgui.Spacing(); 
@@ -1469,7 +1520,7 @@ local function draw_info_tab()
             imgui.PopItemWidth()
             imgui.SameLine()
             local selected_type = veh_types[state.veh_type_filter_idx.v + 1]
-            filt_v=filter_vehicles(vehicles,search_u8,state.current_sort_column,state.sort_direction,selected_type)
+            filt_v=filter_vehicles(vehicles,search_norm,state.current_sort_column,state.sort_direction,selected_type)
         end
         
         local cnt=#filt_v; imgui.Text("Veículos: "..cnt); imgui.Separator();
@@ -1502,7 +1553,7 @@ local function draw_info_tab()
         end; imgui.EndChild()
     elseif state.active_info_sub_tab == 3 then -- Skins
         imgui.TextDisabled("Lista de skins. Defina o ID alvo acima e duplo clique para aplicar.")
-        if not skin_search_map then imgui.TextColored(IMAGE_RED,"Erro!") else local filt_s=filter_skins(search_u8); local cnt=#filt_s; imgui.Text("Skins: "..cnt); imgui.Separator(); imgui.BeginChild("SkinListInfo",imgui.ImVec2(0,0),true); draw_skin_header(); if cnt==0 then imgui.Text("Nenhuma.") else 
+        if not skin_search_map then imgui.TextColored(IMAGE_RED,"Erro!") else local filt_s=filter_skins(search_norm); local cnt=#filt_s; imgui.Text("Skins: "..cnt); imgui.Separator(); imgui.BeginChild("SkinListInfo",imgui.ImVec2(0,0),true); draw_skin_header(); if cnt==0 then imgui.Text("Nenhuma.") else 
             local idw=50; local namew=200; local sc=IMAGE_GREY; local st="|"; local stw=imgui.CalcTextSize(st).x; local sp=imgui.GetStyle().ItemSpacing.x; 
             local p1s=idw; local p2ns=p1s+stw+sp; local p2s=p2ns+namew; local p3as=p2s+stw+sp; 
             for _,s in ipairs(filt_s) do 
@@ -1537,7 +1588,7 @@ local function draw_info_tab()
         imgui.PopItemWidth()
         imgui.SameLine()
         local selected_w_type = weapon_types[state.weapon_type_filter_idx.v + 1]
-        local filt_w=filter_weapons(weapons_list,search_u8,selected_w_type); local cnt=#filt_w; imgui.Text("Armas: "..cnt); imgui.Separator(); imgui.BeginChild("WeaponListInfo",imgui.ImVec2(0,0),true); draw_weapon_header(); if cnt==0 then imgui.Text("Nenhuma.") else 
+        local filt_w=filter_weapons(weapons_list,search_norm,selected_w_type); local cnt=#filt_w; imgui.Text("Armas: "..cnt); imgui.Separator(); imgui.BeginChild("WeaponListInfo",imgui.ImVec2(0,0),true); draw_weapon_header(); if cnt==0 then imgui.Text("Nenhuma.") else 
             local idw=60; local nw=200; local typew=120; 
             local sc=IMAGE_GREY; local st="|"; local stw=imgui.CalcTextSize(st).x; local sp=imgui.GetStyle().ItemSpacing.x; 
             local p1s=idw; local p2ns=p1s+stw+sp; local p2s=p2ns+nw; local p3ts=p2s+stw+sp; local p3s=p3ts+typew; local p4as=p3s+stw+sp; 
@@ -1575,13 +1626,13 @@ local function draw_info_tab()
 end
 
 local function draw_locais_tab()
-    local search_u8 = u8(state.search_text.v):lower(); local search_cp = string.lower(state.search_text.v)
+    local search_norm = remove_accents(state.search_text.v)
     local sub_tabs={{1,"Interiores"},{2,"Favoritos"}}; local sub_space=(imgui.GetWindowWidth()-25)/#sub_tabs; local sub_btn_w=imgui.ImVec2(math.floor(sub_space)-5,22); local act_bg=IMAGE_WHITE; local act_hov=imgui.ImVec4(.8,.8,.8,1); local act_txt=IMAGE_BLACK; local inact_bg=imgui.GetStyle().Colors[imgui.Col.Button]; local inact_hov=imgui.GetStyle().Colors[imgui.Col.ButtonHovered]; local inact_txt=imgui.GetStyle().Colors[imgui.Col.Text]
     for i,sub in ipairs(sub_tabs) do local sid,snm=sub[1],sub[2]; local is_act=state.active_locais_sub_tab==sid; if is_act then imgui.PushStyleColor(imgui.Col.Button,act_bg); imgui.PushStyleColor(imgui.Col.ButtonHovered,act_hov); imgui.PushStyleColor(imgui.Col.ButtonActive,act_hov); imgui.PushStyleColor(imgui.Col.Text,act_txt) else imgui.PushStyleColor(imgui.Col.Button,inact_bg); imgui.PushStyleColor(imgui.Col.ButtonHovered,inact_hov); imgui.PushStyleColor(imgui.Col.ButtonActive,inact_hov); imgui.PushStyleColor(imgui.Col.Text,inact_txt) end; if imgui.Button(snm,sub_btn_w) then state.active_locais_sub_tab=sid end; imgui.PopStyleColor(4); if i<#sub_tabs then imgui.SameLine(0,2) end end; imgui.Spacing(); imgui.Separator()
 
     if state.active_locais_sub_tab == 1 then
         imgui.TextDisabled("Interiores do jogo. Duplo clique para ir. Botao direito para favoritar.")
-        local filt_int=filter_interiors(interiors_list,search_u8); local cnt=#filt_int; imgui.Text("Interiores: "..cnt); imgui.Separator(); imgui.BeginChild("IntList",imgui.ImVec2(0,0),true); draw_interior_header(); 
+        local filt_int=filter_interiors(interiors_list,search_norm); local cnt=#filt_int; imgui.Text("Interiores: "..cnt); imgui.Separator(); imgui.BeginChild("IntList",imgui.ImVec2(0,0),true); draw_interior_header(); 
         if cnt==0 then imgui.Text("Nenhum.") else 
             local nw=300; local cw=200; local sc=IMAGE_GREY; local st="|"; local sw=imgui.CalcTextSize(st).x; local sp=imgui.GetStyle().ItemSpacing.x; local p1s=nw; local p2cs=p1s+sw+sp; local p2s=p2cs+cw; local p3is=p2s+sw+sp; 
             for _,i in ipairs(filt_int) do 
@@ -1648,7 +1699,7 @@ local function draw_locais_tab()
         end
         imgui.Separator()
 
-        local filt_evt = filter_interiors(event_locations, search_u8); local cnt = #filt_evt; imgui.Text("Locais Favoritos: " .. cnt); imgui.Separator(); imgui.BeginChild("EventLocs", imgui.ImVec2(0,0), true)
+        local filt_evt = filter_interiors(event_locations, search_norm); local cnt = #filt_evt; imgui.Text("Locais Favoritos: " .. cnt); imgui.Separator(); imgui.BeginChild("EventLocs", imgui.ImVec2(0,0), true)
         local should_open_edit_popup = false
         
         local nw = 300; local cw = 200
@@ -1850,9 +1901,8 @@ function imgui.OnDrawFrame()
         local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED); if myid then local mynick=sampGetPlayerNickname(myid) or "?"; imgui.TextColored(IMAGE_YELLOW, string.format("Voce: %s (ID: %d)", u8(mynick), myid)); imgui.Spacing() end
 
         local search_lbl = ""; local show_search = true
-        if state.active_tab == 1 then search_lbl="Pesq. Novato" elseif state.active_tab == 2 then search_lbl="Pesq. Online" elseif state.active_tab == 4 then if state.active_info_sub_tab == 1 then search_lbl="Pesq. Prof" elseif state.active_info_sub_tab == 2 then search_lbl="Pesq. Veh" elseif state.active_info_sub_tab == 3 then search_lbl="Pesq. Skin" elseif state.active_info_sub_tab == 4 then search_lbl="Pesq. Arma" elseif state.active_info_sub_tab == 5 then show_search = false else search_lbl="Pesq." end elseif state.active_tab == 9 then if state.active_locais_sub_tab == 1 then search_lbl="Pesq. Interior" else search_lbl="Pesq. Favorito" end elseif state.active_tab == 11 or state.active_tab == 13 then show_search = false else search_lbl="Pesq." end
+        if state.active_tab == 1 then search_lbl="Pesq. Novato" elseif state.active_tab == 2 then search_lbl="Pesq. Online" elseif state.active_tab == 4 then if state.active_info_sub_tab == 1 then search_lbl="Pesq. Prof" elseif state.active_info_sub_tab == 2 then search_lbl="Pesq. Veh" elseif state.active_info_sub_tab == 3 then search_lbl="Pesq. Skin" elseif state.active_info_sub_tab == 4 then search_lbl="Pesq. Arma" elseif state.active_info_sub_tab == 5 then search_lbl="Pesq. FAQ" else search_lbl="Pesq." end elseif state.active_tab == 9 then if state.active_locais_sub_tab == 1 then search_lbl="Pesq. Interior" else search_lbl="Pesq. Favorito" end elseif state.active_tab == 11 or state.active_tab == 13 then show_search = false else search_lbl="Pesq." end
         if show_search then imgui.InputText(search_lbl, state.search_text, imgui.ImVec2(300, 0)); imgui.Spacing() elseif state.active_tab ~= 11 and (state.active_tab ~= 4 or state.active_info_sub_tab ~= 5) then imgui.TextColored(IMAGE_GREY,"Selecione topico."); imgui.Spacing() end
-        local search_u8 = u8(state.search_text.v):lower(); local search_cp = string.lower(state.search_text.v)
 
         if state.active_tab == 1 or state.active_tab == 2 then
             draw_players_tab()
@@ -1878,6 +1928,7 @@ sampRegisterChatCommand("pe", function() sampSendChat("/painelevento") end)
 sampRegisterChatCommand("pa", function() sampSendChat("/paineladmin") end)
 sampRegisterChatCommand("pdrop", function() sampSendChat("/painelairdrop") end)
 sampRegisterChatCommand("cadm", function() sampSendChat("/comandosadm") end)
+sampRegisterChatCommand("cadmin", function() sampSendChat("/comandosadm") end)
 sampRegisterChatCommand("admesp", function() 
     esp_active = not esp_active
     sampAddChatMessage(esp_active and "[PI] ESP Admin Ativado." or "[PI] ESP Admin Desativado.", -1)
