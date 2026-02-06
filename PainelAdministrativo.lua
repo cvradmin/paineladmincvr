@@ -217,6 +217,16 @@ local faq_list = {
     { q = "Denuncias e Punicoes", a = "Motivos que contam nivel de denuncia: D.B, A.R, A.J, A.T.\nD.F (Denuncia Forum) acrescenta tempo extra.\nMotivos que removem na despunicao: D.B, D.F, A.R, A.J, A.T." },
 }
 
+local changelog_list = {
+    { version = "1.0.90", date = "06/02/2026", changes = {
+        "Adicionado aba Changelog.",
+        "Correção na aba Novatos/Online (contadores).",
+        "Opção de salvar IPs automaticamente (.txt).",
+        "Melhorias na detecção de dispositivos (PC/Mobile).",
+        "Correção de bugs gerais."
+    }},
+}
+
 -- LISTA DE LOCAIS PARA EVENTOS (DEFAULT)
 local default_event_locations = {
     {name = "Monte Chiliad (Topo)", x = -2325.6, y = -1620.4, z = 483.7, id = 0},
@@ -1482,7 +1492,7 @@ function imgui.OnDrawFrame()
 
         -- [[ ABA INFORMACOES (ID 4) ]]
         elseif state.active_tab == 4 then
-            local sub_tabs={{1,"Profissoes"},{2,"Veiculos"},{3,"Skins"},{4,"Armas"},{5,"Duvidas"},{6,"Links"}}; local sub_space=(imgui.GetWindowWidth()-25)/#sub_tabs; local sub_btn_w=imgui.ImVec2(math.floor(sub_space)-5,22); local act_bg=IMAGE_WHITE; local act_hov=imgui.ImVec4(.8,.8,.8,1); local act_txt=IMAGE_BLACK; local inact_bg=imgui.GetStyle().Colors[imgui.Col.Button]; local inact_hov=imgui.GetStyle().Colors[imgui.Col.ButtonHovered]; local inact_txt=imgui.GetStyle().Colors[imgui.Col.Text]
+            local sub_tabs={{1,"Profissoes"},{2,"Veiculos"},{3,"Skins"},{4,"Armas"},{5,"Duvidas"},{6,"Links"},{7,"Changelog"}}; local sub_space=(imgui.GetWindowWidth()-25)/#sub_tabs; local sub_btn_w=imgui.ImVec2(math.floor(sub_space)-5,22); local act_bg=IMAGE_WHITE; local act_hov=imgui.ImVec4(.8,.8,.8,1); local act_txt=IMAGE_BLACK; local inact_bg=imgui.GetStyle().Colors[imgui.Col.Button]; local inact_hov=imgui.GetStyle().Colors[imgui.Col.ButtonHovered]; local inact_txt=imgui.GetStyle().Colors[imgui.Col.Text]
             for i,sub in ipairs(sub_tabs) do local sid,snm=sub[1],sub[2]; local is_act=state.active_info_sub_tab==sid; if is_act then imgui.PushStyleColor(imgui.Col.Button,act_bg); imgui.PushStyleColor(imgui.Col.ButtonHovered,act_hov); imgui.PushStyleColor(imgui.Col.ButtonActive,act_hov); imgui.PushStyleColor(imgui.Col.Text,act_txt) else imgui.PushStyleColor(imgui.Col.Button,inact_bg); imgui.PushStyleColor(imgui.Col.ButtonHovered,inact_hov); imgui.PushStyleColor(imgui.Col.ButtonActive,inact_hov); imgui.PushStyleColor(imgui.Col.Text,inact_txt) end; if imgui.Button(snm,sub_btn_w) then state.active_info_sub_tab=sid end; imgui.PopStyleColor(4); if i<#sub_tabs then imgui.SameLine(0,2) end end; imgui.Spacing(); imgui.Separator()
 
             if state.active_info_sub_tab == 1 then -- Profissoes
@@ -1504,6 +1514,18 @@ function imgui.OnDrawFrame()
                 if imgui.Button("Administracao", btn_size) then os.execute('explorer "https://www.loskatchorros.com.br/forum/index.php?/forum/13-administra%C3%A7%C3%A3o/"') end
                 if imgui.Button("Servidor", btn_size) then os.execute('explorer "https://www.loskatchorros.com.br/forum/index.php?/forum/151-servidor/"') end
                 if imgui.Button("Changelog (Atualizacoes)", btn_size) then os.execute('explorer "https://www.loskatchorros.com.br/forum/index.php?/forum/71-changelog/"') end
+            elseif state.active_info_sub_tab == 7 then -- Changelog
+                imgui.TextColored(IMAGE_GREEN, "Historico de Versoes (Changelog)"); imgui.Separator()
+                imgui.BeginChild("ChangelogList", imgui.ImVec2(0,0), true)
+                for _, item in ipairs(changelog_list) do
+                    if imgui.CollapsingHeader("v" .. item.version .. " (" .. item.date .. ")") then
+                        for _, change in ipairs(item.changes) do
+                            imgui.BulletText(change)
+                        end
+                        imgui.Spacing()
+                    end
+                end
+                imgui.EndChild()
             end
 
         -- [[ ABA LOCAIS (ID 9) - APENAS FAVORITOS ]]
