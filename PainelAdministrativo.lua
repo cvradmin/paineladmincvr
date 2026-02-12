@@ -15,9 +15,8 @@ local u8 = function(s) return s and encoding.UTF8(s) or "" end
 
 script_name("PainelInfoHelper")
 script_author("Gerado por ChatGPT - Consolidado por Gemini")
-script_version("1.1.46")
-local script_ver_num = 1146
-script_version_number(script_ver_num)
+script_version("1.1.49")
+script_version_number(1149)
 
 -- VARIAVEIS DO ADMIN ESP (INTEGRACAO)
 local esp_active = false
@@ -28,6 +27,8 @@ local esp_spectate_id = -1
 local esp_spectate_vehicle_id = -1
 local last_shot_times = {}
 local last_shot_weapons = {}
+local last_shot_log_times = {}
+local session_date_str = os.date("%Y-%m-%d_%H-%M-%S")
 local weapon_names_esp = {
     [0]="Punhos", [1]="Soco Ingles", [2]="Taco de Golf", [3]="Cassetete", [4]="Faca", [5]="Taco de Basebol",
     [6]="Pa", [7]="Taco de Bilhar", [8]="Katana", [9]="Serra Eletrica", [10]="Dildo Roxo", [11]="Dildo Branco",
@@ -300,6 +301,21 @@ local function set_nametag_status(enable)
     end)
 end
 
+local function logShooting(id, nick, weapon)
+    pcall(function()
+        local dir = getWorkingDirectory() .. "\\logs tiros"
+        if not doesDirectoryExist(dir) then createDirectory(dir) end
+        local p = dir .. "\\PainelHelper_Shooting_" .. session_date_str .. ".txt"
+        local t = os.date("[%H:%M:%S]")
+        local l = string.format("%s Atirador: %s [%d] | Arma: %s\n", t, nick, id, weapon)
+        local f = io.open(p, "a+")
+        if f then
+            f:write(l)
+            f:close()
+        end
+    end)
+end
+
 -- FUNCAO LOGICA DO ESP (MOVIDA PARA CIMA)
 local function draw_esp_logic()
     if (esp_active or prof_tags_active or cfg.main.esp_side_list) and esp_font and prof_font then
@@ -393,6 +409,14 @@ local function draw_esp_logic()
                     if isCharShooting(handle) then
                         last_shot_times[id] = os.clock()
                         last_shot_weapons[id] = getCurrentCharWeapon(handle)
+                        
+                        if not last_shot_log_times[id] or (os.clock() - last_shot_log_times[id] > 1.0) then
+                            local wep = getCurrentCharWeapon(handle)
+                            local wep_name = weapon_names_esp[wep] or "Desconhecida"
+                            local nick = sampGetPlayerNickname(id) or "Unknown"
+                            logShooting(id, nick, wep_name)
+                            last_shot_log_times[id] = os.clock()
+                        end
                     end
 
                     if last_shot_times[id] and (os.clock() - last_shot_times[id] < 1.0) then
@@ -539,6 +563,17 @@ local faq_list = {
 }
 
 local changelog_list = {
+    { version = "1.1.48", date = "11/02/2026", changes = {
+        "Verificacao: Codigo da lista lateral validado e funcional.",
+    }},
+    { version = "1.1.49", date = "12/02/2026", changes = {
+        "Melhoria: 'Escanear Dispositivos' agora salva IP.",
+        "Melhoria: Log de tiros por sessao e sem alvo.",
+        "Melhoria: Renomeado 'CP' para 'Copiar'."
+    }},
+    { version = "1.1.47", date = "11/02/2026", changes = {
+        "Novo: Sistema de Log de Tiros (Salva em 'logs tiros').",
+    }},
     { version = "1.1.46", date = "11/02/2026", changes = {
         "Melhoria: Aviso '[ATIRANDO]' agora mostra o nome da arma.",
     }},
@@ -979,6 +1014,17 @@ function sampev.onServerMessage(color, text)
         local name_lower = state.current_scan_info.name:lower()
         -- Verifica se a mensagem tem o NICK do jogador atual ou padrao de IP (mesmo com *)
         if txt:find(name_lower, 1, true) or txt:find("ip:") or txt:find("%d+%.%d+%.%d+%.[%d%*]+") or txt:find("android") or txt:find("mobile") or txt:find("celular") or txt:find("launcher") then
+            local ip = text:match("(%d+%.%d+%.%d+%.%d+)")
+            if ip then
+                state.player_ips[state.current_scan_info.id] = {ip = ip, nick = state.current_scan_info.name}
+                local log_text = string.format("Nick: %s (ID: %d) | %s", state.current_scan_info.name, state.current_scan_info.id, text)
+                logFoundIP(log_text)
+                if state.ip_extractor_check_dupes.v then
+                    if not state.extracted_ips[ip] then state.extracted_ips[ip] = {} end
+                    table.insert(state.extracted_ips[ip], { txt = log_text, info = state.current_scan_info })
+                end
+            end
+
             local detected = nil
             if txt:find("android") or txt:find("mobile") or txt:find("celular") then
                 detected = "Mobile"
@@ -1078,6 +1124,18 @@ function sampev.onShowDialog(id, style, title, button1, button2, text)
     if state.device_scanner_active then
         -- Tenta ler o dialog para achar PC/Mobile sem mostrar na tela
         local content = strip_colors((title or "") .. " " .. (text or "")):lower()
+        local raw_text = (title or "") .. " " .. (text or "")
+        local ip = raw_text:match("(%d+%.%d+%.%d+%.%d+)")
+        if ip and state.current_scan_info then
+            state.player_ips[state.current_scan_info.id] = {ip = ip, nick = state.current_scan_info.name}
+            local log_text = string.format("Nick: %s (ID: %d) | Dialog: %s", state.current_scan_info.name, state.current_scan_info.id, raw_text)
+            logFoundIP(log_text)
+            if state.ip_extractor_check_dupes.v then
+                if not state.extracted_ips[ip] then state.extracted_ips[ip] = {} end
+                table.insert(state.extracted_ips[ip], { txt = log_text, info = state.current_scan_info })
+            end
+        end
+
         local detected = nil
         if content:find("android") or content:find("mobile") or content:find("celular") or content:find("ios") then
             detected = "Mobile"
@@ -1705,7 +1763,7 @@ function imgui.OnDrawFrame()
     if state.window_open.v then
         local sw, sh = getScreenResolution(); imgui.SetNextWindowPos(imgui.ImVec2(sw / 2, sh / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5)); imgui.SetNextWindowSize(imgui.ImVec2(700, 500), imgui.Cond.FirstUseEver)
         
-        imgui.Begin("Painel Helper [F12] - v1.0.90", state.window_open)
+        imgui.Begin("Painel Helper [F12] - v1.1.48", state.window_open)
 
         local tabs = { {1, "Novatos"}, {2, "Online"}, {4, "Informacoes"}, {9, "Locais"}, {13, "Comandos"}, {11, "Config"} }; local btn_space = imgui.GetWindowWidth() / #tabs; local btn_w = imgui.ImVec2(math.floor(btn_space) - 5, 25); local act_bg=IMAGE_WHITE; local act_hov=imgui.ImVec4(.8,.8,.8,1); local act_txt=IMAGE_BLACK; local inact_bg=imgui.GetStyle().Colors[imgui.Col.Button]; local inact_hov=imgui.GetStyle().Colors[imgui.Col.ButtonHovered]; local inact_txt=imgui.GetStyle().Colors[imgui.Col.Text]
         for i, tab in ipairs(tabs) do local tid, tnm = tab[1], tab[2]; local is_act = state.active_tab == tid; if is_act then imgui.PushStyleColor(imgui.Col.Button,act_bg); imgui.PushStyleColor(imgui.Col.ButtonHovered,act_hov); imgui.PushStyleColor(imgui.Col.ButtonActive,act_hov); imgui.PushStyleColor(imgui.Col.Text,act_txt) else imgui.PushStyleColor(imgui.Col.Button,inact_bg); imgui.PushStyleColor(imgui.Col.ButtonHovered,inact_hov); imgui.PushStyleColor(imgui.Col.ButtonActive,inact_hov); imgui.PushStyleColor(imgui.Col.Text,inact_txt) end; if imgui.Button(tnm, btn_w) then if state.active_tab ~= tid then state.active_tab=tid end end; imgui.PopStyleColor(4); if i < #tabs then imgui.SameLine(0, 2) end end; imgui.Separator(); imgui.Text(string.format("Atualizacao: %s", os.date("%H:%M:%S"))); imgui.Spacing()
@@ -1801,45 +1859,6 @@ function imgui.OnDrawFrame()
                 imgui.SameLine(); imgui.TextColored(IMAGE_PINK, string.format("Mobile: %d", total_mobile))
                 
                 imgui.SameLine()
-                if not state.ip_extractor_active then
-                    if imgui.Button("Escanear IPs") then
-                        local total = tonumber(state.ip_extractor_total_buf.v)
-                        if total and total > 0 then
-                            lua_thread.create(function()
-                                state.ip_extractor_active = true
-                                state.ip_extractor_current = 0
-                                state.extracted_ips = {}
-                                state.ip_req_queue = {}
-                                sampAddChatMessage("[PI] Iniciando extracao de IPs...", 0x00FF00)
-                                for i = 0, total - 1 do
-                                    if not state.ip_extractor_active then
-                                        sampAddChatMessage("[PI] Extracao de IPs interrompida.", 0xFFD700)
-                                        break
-                                    end
-                                    state.ip_extractor_current = i
-                                    if sampIsPlayerConnected(i) then
-                                        local nick = sampGetPlayerNickname(i)
-                                        table.insert(state.ip_req_queue, {id = i, name = nick})
-                                        sampSendChat("/IP " .. i)
-                                        wait(50)
-                                    end
-                                    if i % 50 == 0 then wait(0) end
-                                end
-                                wait(1000)
-                                if state.ip_extractor_active then
-                                    sampAddChatMessage("[PI] Extracao de IPs concluida!", 0x00FF00)
-                                    if state.ip_extractor_check_dupes.v then saveDuplicatesReport() end
-                                end
-                                state.ip_extractor_active = false
-                            end)
-                        else
-                            sampAddChatMessage("[PI] Quantidade de IPs invalida.", 0xFF0000)
-                        end
-                    end
-                else
-                    imgui.TextColored(IMAGE_YELLOW, string.format("IPs: %d/%s", state.ip_extractor_current, state.ip_extractor_total_buf.v))
-                end
-                imgui.SameLine()
                 if not state.device_scanner_active then
                     if imgui.Button("Escanear Dispositivos") then
                         lua_thread.create(function()
@@ -1902,8 +1921,8 @@ function imgui.OnDrawFrame()
                     local line_lbl=string.format("##p_%d",p.id)
                     imgui.Selectable(line_lbl, false, 0, imgui.ImVec2(0, imgui.GetTextLineHeight()))
                     if imgui.BeginPopupContextItem("p_act"..p.id) then 
-                        if imgui.MenuItem("CP Nick") then imgui.SetClipboardText(u8(p.nick)); sampAddChatMessage("Nick CP",0) end; 
-                        if p.profession then if imgui.MenuItem("CP Info") then imgui.SetClipboardText(u8(p.profession)); sampAddChatMessage("Info CP",0) end end; 
+                        if imgui.MenuItem("Copiar Nick") then imgui.SetClipboardText(u8(p.nick)); sampAddChatMessage("Nick Copiado",0) end; 
+                        if p.profession then if imgui.MenuItem("Copiar Info") then imgui.SetClipboardText(u8(p.profession)); sampAddChatMessage("Info Copiada",0) end end; 
                         local ip_data = state.player_ips[p.id]
                         if ip_data and ip_data.nick == p.nick then if imgui.MenuItem("Copiar IP") then imgui.SetClipboardText(ip_data.ip); sampAddChatMessage("[PI] IP copiado: " .. ip_data.ip, -1) end end
                         imgui.Separator(); 
@@ -2168,6 +2187,9 @@ function main()
     local saved_theme = (cfg.main and cfg.main.theme) or "Padrao"
     for i, t in ipairs(theme_list) do if t == saved_theme then state.theme_combo_idx.v = i - 1 end end
     state.ip_extractor_total_buf.v = "300"
+    
+    if backup_config then backup_config() end
+    
     apply_theme(saved_theme)
     sampAddChatMessage("[PainelInfoHelper] Carregado e funcional! Pressione F12.", 0x00FF00)
     
