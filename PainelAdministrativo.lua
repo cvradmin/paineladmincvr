@@ -15,8 +15,8 @@ local u8 = function(s) return s and encoding.UTF8(s) or "" end
 
 script_name("PainelInfoHelper")
 script_author("Gerado por ChatGPT - Consolidado por Gemini")
-script_version("1.1.46")
-local script_ver_num = 1146
+script_version("1.1.54")
+local script_ver_num = 1154
 script_version_number(script_ver_num)
 
 -- VARIAVEIS DO ADMIN ESP (INTEGRACAO)
@@ -26,6 +26,10 @@ local esp_font = renderCreateFont('Arial', 10, 5) -- Arial 10 com Borda
 local prof_font = nil -- Inicializado apos carregar config
 local esp_spectate_id = -1
 local esp_spectate_vehicle_id = -1
+local last_shot_times = {}
+local last_shot_weapons = {}
+local last_shot_log_times = {}
+local session_date_str = os.date("%Y-%m-%d_%H-%M-%S")
 local weapon_names_esp = {
     [0]="Punhos", [1]="Soco Ingles", [2]="Taco de Golf", [3]="Cassetete", [4]="Faca", [5]="Taco de Basebol",
     [6]="Pa", [7]="Taco de Bilhar", [8]="Katana", [9]="Serra Eletrica", [10]="Dildo Roxo", [11]="Dildo Branco",
@@ -298,6 +302,44 @@ local function set_nametag_status(enable)
     end)
 end
 
+local function logShooting(id, nick, weapon)
+    pcall(function()
+        local dir = getWorkingDirectory() .. "\\logs tiros"
+        if not doesDirectoryExist(dir) then createDirectory(dir) end
+        local p = dir .. "\\PainelInfo_Shooting_" .. session_date_str .. ".txt"
+        local t = os.date("[%H:%M:%S]")
+        local l = string.format("%s Atirador: %s [%d] | Arma: %s\n", t, nick, id, weapon)
+        local f = io.open(p, "a+")
+        if f then
+            f:write(l)
+            f:close()
+        end
+    end)
+end
+
+local function check_shooting_logic()
+    for _, handle in ipairs(getAllChars()) do
+        if doesCharExist(handle) and handle ~= PLAYER_PED then
+            local res, id = sampGetPlayerIdByCharHandle(handle)
+            if res and sampIsPlayerConnected(id) then
+                if isCharShooting(handle) then
+                    last_shot_times[id] = os.clock()
+                    last_shot_weapons[id] = getCurrentCharWeapon(handle)
+                    
+                    if not last_shot_log_times[id] or (os.clock() - last_shot_log_times[id] > 1.0) then
+                        local wep = getCurrentCharWeapon(handle)
+                        local wep_name = weapon_names_esp[wep] or "Desconhecida"
+                        
+                        local nick = sampGetPlayerNickname(id) or "Unknown"
+                        logShooting(id, nick, wep_name)
+                        last_shot_log_times[id] = os.clock()
+                    end
+                end
+            end
+        end
+    end
+end
+
 -- FUNCAO LOGICA DO ESP (MOVIDA PARA CIMA)
 local function draw_esp_logic()
     if (esp_active or prof_tags_active or cfg.main.esp_side_list) and esp_font and prof_font then
@@ -388,6 +430,13 @@ local function draw_esp_logic()
                 if headX and headY then
                     local currentY = headY
 
+                    if last_shot_times[id] and (os.clock() - last_shot_times[id] < 1.0) then
+                        local wep_name = weapon_names_esp[last_shot_weapons[id]] or "Arma"
+                        local shoot_text = "[ATIRANDO: " .. string.upper(wep_name) .. "]"
+                        local sW = renderGetFontDrawTextLength(esp_font, shoot_text)
+                        renderFontDrawText(esp_font, shoot_text, headX - (sW / 2), currentY - 12, 0xFFFF0000)
+                    end
+
                                     local nick = sampGetPlayerNickname(id) or "Unknown"
 
                                     currentY = currentY + (cfg.main.esp_prof_offset or 0)
@@ -433,6 +482,7 @@ local function draw_esp_logic()
         end
         
         if #side_list_data > 0 then
+            table.sort(side_list_data, function(a, b) return a.id < b.id end) -- Ordena por ID para ficar fixo
             local startX = cfg.main.esp_side_list_x or 10
             local startY = (sh / 2 - (#side_list_data * 14) / 2) + (cfg.main.esp_side_list_y or 0)
             local maxW = 0
@@ -525,6 +575,30 @@ local faq_list = {
 }
 
 local changelog_list = {
+    { version = "1.1.54", date = "14/02/2026", changes = {
+        "Revertido: Removido sistema de localizacao (causava instabilidade).",
+    }},
+    { version = "1.1.53", date = "14/02/2026", changes = {
+        "Correcao: Removido pcall do loop principal para evitar erro de corrotina.",
+    }},
+    { version = "1.1.52", date = "14/02/2026", changes = {
+        "Melhoria: Lista lateral agora ordenada por ID (fixa).",
+    }},
+    { version = "1.1.51", date = "14/02/2026", changes = {
+        "Correcao: Erro 'getZoneName' corrigido para 'getNameOfZone'.",
+    }},
+    { version = "1.1.50", date = "14/02/2026", changes = {
+        "Novo: Comando /local para verificar zona e cidade atual.",
+    }},
+    { version = "1.1.49", date = "14/02/2026", changes = {
+        "Melhoria: Log de tiros agora inclui a Cidade (LS/SF/LV) junto com o Bairro.",
+    }},
+    { version = "1.1.48", date = "14/02/2026", changes = {
+        "Correcao: Protecao para garantir que o log de tiros salve mesmo sem nome da zona.",
+    }},
+    { version = "1.1.47", date = "14/02/2026", changes = {
+        "Novo: Sistema de Log de Tiros com localizacao (Salva em 'logs tiros').",
+    }},
     { version = "1.1.46", date = "13/02/2026", changes = {
         "Novo: Filtro 'Multicontas' na aba Online (Requer scan de IPs).",
     }},
@@ -2173,12 +2247,8 @@ function main()
     end)
 
     while true do wait(0)
-        local status, err = pcall(draw_esp_logic)
-        if not status then
-            print("[PainelInfoHelper] Erro no ESP: " .. tostring(err))
-            esp_active = false
-            sampAddChatMessage("[PI] Erro critico no ESP: " .. tostring(err), 0xFF0000)
-        end
+        check_shooting_logic()
+        draw_esp_logic()
 
         if waiting_for_bind then
             for k = 1, 255 do
