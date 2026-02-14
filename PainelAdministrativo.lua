@@ -15,8 +15,8 @@ local u8 = function(s) return s and encoding.UTF8(s) or "" end
 
 script_name("PainelInfoHelper")
 script_author("Gerado por ChatGPT - Consolidado por Gemini")
-script_version("1.1.54")
-local script_ver_num = 1154
+script_version("1.1.57")
+local script_ver_num = 1157
 script_version_number(script_ver_num)
 
 -- VARIAVEIS DO ADMIN ESP (INTEGRACAO)
@@ -302,13 +302,24 @@ local function set_nametag_status(enable)
     end)
 end
 
-local function logShooting(id, nick, weapon)
+local function getCityFromCoords(x, y)
+    if x > -920 and x < 3000 and y > -3000 and y < 430 then return "Los Santos" end
+    if x > -3000 and x < -850 and y > -2000 and y < 3000 then return "San Fierro" end
+    if x > 850 and x < 3000 and y > 500 and y < 3000 then return "Las Venturas" end
+    return "San Andreas" -- Countryside/Desert
+end
+
+local function logShooting(id, nick, weapon, x, y, z)
     pcall(function()
         local dir = getWorkingDirectory() .. "\\logs tiros"
         if not doesDirectoryExist(dir) then createDirectory(dir) end
         local p = dir .. "\\PainelInfo_Shooting_" .. session_date_str .. ".txt"
         local t = os.date("[%H:%M:%S]")
-        local l = string.format("%s Atirador: %s [%d] | Arma: %s\n", t, nick, id, weapon)
+        local zone_gxt = getNameOfZone(x, y, z)
+        local zone_name = (zone_gxt and getGxtText(zone_gxt)) or "Desconhecido"
+        local city_name = getCityFromCoords(x, y)
+        local full_loc = string.format("%s, %s", zone_name, city_name)
+        local l = string.format("%s Atirador: %s [%d] | Arma: %s | Local: %s (%.1f, %.1f, %.1f)\n", t, nick, id, weapon, full_loc, x, y, z)
         local f = io.open(p, "a+")
         if f then
             f:write(l)
@@ -331,7 +342,8 @@ local function check_shooting_logic()
                         local wep_name = weapon_names_esp[wep] or "Desconhecida"
                         
                         local nick = sampGetPlayerNickname(id) or "Unknown"
-                        logShooting(id, nick, wep_name)
+                        local px, py, pz = getCharCoordinates(handle)
+                        logShooting(id, nick, wep_name, px, py, pz)
                         last_shot_log_times[id] = os.clock()
                     end
                 end
@@ -575,6 +587,15 @@ local faq_list = {
 }
 
 local changelog_list = {
+    { version = "1.1.57", date = "14/02/2026", changes = {
+        "Teste: Reativado sistema de localizacao no log de tiros.",
+    }},
+    { version = "1.1.56", date = "14/02/2026", changes = {
+        "Revertido: Removido sistema de localizacao (causava crash).",
+    }},
+    { version = "1.1.55", date = "14/02/2026", changes = {
+        "Restaurado: Sistema de localizacao no log de tiros (Confirmado funcional).",
+    }},
     { version = "1.1.54", date = "14/02/2026", changes = {
         "Revertido: Removido sistema de localizacao (causava instabilidade).",
     }},
@@ -2229,6 +2250,13 @@ sampRegisterChatCommand("veiculos", function() state.window_veiculos.v = not sta
 sampRegisterChatCommand("skins", function() state.window_skins.v = not state.window_skins.v; check_process() end)
 sampRegisterChatCommand("armas", function() state.window_armas.v = not state.window_armas.v; check_process() end)
 sampRegisterChatCommand("profissoes", function() state.window_profissoes.v = not state.window_profissoes.v; check_process() end)
+sampRegisterChatCommand("local", function()
+    local x, y, z = getCharCoordinates(PLAYER_PED)
+    local zone_gxt = getNameOfZone(x, y, z)
+    local zone_name = (zone_gxt and getGxtText(zone_gxt)) or "Desconhecido"
+    local city_name = getCityFromCoords(x, y)
+    sampAddChatMessage(string.format("[PI] Local atual: %s, %s (%.1f, %.1f, %.1f)", zone_name, city_name, x, y, z), -1)
+end)
 
 function main()
     while not isSampfuncsLoaded() do wait(100) end; while not isSampAvailable() do wait(100) end; check_process()
