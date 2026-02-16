@@ -310,39 +310,27 @@ local function getCityFromCoords(x, y)
     return "San Andreas" -- Countryside/Desert
 end
 
-local log_dir = getWorkingDirectory() .. "\\logs tiros"
-local shooting_log_buffer = {}
-local last_log_flush = os.clock()
-
-local function flush_shooting_logs()
-    if #shooting_log_buffer == 0 then return end
+local function logShooting(id, nick, weapon, x, y, z)
     pcall(function()
-        if not doesDirectoryExist(log_dir) then createDirectory(log_dir) end
-        local p = log_dir .. "\\PainelInfo_Shooting_" .. session_date_str .. ".txt"
+        local dir = getWorkingDirectory() .. "\\logs tiros"
+        if not doesDirectoryExist(dir) then createDirectory(dir) end
+        local p = dir .. "\\PainelInfo_Shooting_" .. session_date_str .. ".txt"
+        local t = os.date("[%H:%M:%S]")
+        local zone_gxt = getNameOfZone(x, y, z)
+        local zone_name = (zone_gxt and getGxtText(zone_gxt)) or "Desconhecido"
+        local city_name = getCityFromCoords(x, y)
+        local full_loc = string.format("%s, %s", zone_name, city_name)
+        local l = string.format("%s Atirador: %s [%d] | Arma: %s | Local: %s (%.1f, %.1f, %.1f)\n", t, nick, id, weapon, full_loc, x, y, z)
         local f = io.open(p, "a+")
         if f then
-            for _, l in ipairs(shooting_log_buffer) do f:write(l) end
+            f:write(l)
             f:close()
         end
     end)
-    shooting_log_buffer = {}
-    last_log_flush = os.clock()
 end
 
-local function logShooting(id, nick, weapon, x, y, z)
-    local t = os.date("[%H:%M:%S]")
-    local zone_gxt = getNameOfZone(x, y, z)
-    local zone_name = (zone_gxt and getGxtText(zone_gxt)) or "Desconhecido"
-    local city_name = getCityFromCoords(x, y)
-    local full_loc = string.format("%s, %s", zone_name, city_name)
-    local l = string.format("%s Atirador: %s [%d] | Arma: %s | Local: %s (%.1f, %.1f, %.1f)\n", t, nick, id, weapon, full_loc, x, y, z)
-    table.insert(shooting_log_buffer, l)
-    
-    if #shooting_log_buffer >= 50 then flush_shooting_logs() end
-end
-
-local function check_shooting_logic(chars)
-    for _, handle in ipairs(chars) do
+local function check_shooting_logic()
+    for _, handle in ipairs(getAllChars()) do
         if doesCharExist(handle) and handle ~= PLAYER_PED then
             local res, id = sampGetPlayerIdByCharHandle(handle)
             if res and sampIsPlayerConnected(id) then
@@ -366,14 +354,14 @@ local function check_shooting_logic(chars)
 end
 
 -- FUNCAO LOGICA DO ESP (MOVIDA PARA CIMA)
-local function draw_esp_logic(chars)
+local function draw_esp_logic()
     if (esp_active or prof_tags_active or cfg.main.esp_side_list) and esp_font and prof_font then
         local myX, myY, myZ = getCharCoordinates(PLAYER_PED)
         local camX, camY, camZ = getActiveCameraCoordinates()
         local sw, sh = getScreenResolution()
         
         local render_list = {}
-        for _, handle in ipairs(chars) do
+        for _, handle in ipairs(getAllChars()) do
             if doesCharExist(handle) and handle ~= PLAYER_PED then
                 local res, id = sampGetPlayerIdByCharHandle(handle)
                 if res and sampIsPlayerConnected(id) then
@@ -2337,12 +2325,9 @@ function main()
     end)
 
     while true do wait(0)
-        local chars = getAllChars()
-        check_shooting_logic(chars)
-        draw_esp_logic(chars)
-
-        if os.clock() - last_log_flush > 5.0 then
-            flush_shooting_logs()
+        if not isGamePaused() and isGameWindowForeground() then
+            check_shooting_logic()
+            draw_esp_logic()
         end
 
         if waiting_for_bind then
@@ -2368,6 +2353,5 @@ function onScriptTerminate(script, quit)
     if script == thisScript() then
         set_nametag_status(false)
         inicfg.save(cfg, "PainelInfoHelper_Config.ini")
-        flush_shooting_logs()
     end
 end

@@ -2827,9 +2827,11 @@ function main()
     end
 
     while true do wait(0)
-        local chars = getAllChars()
-        check_shooting_logic(chars)
-        draw_esp_logic(chars)
+        if not isGamePaused() and isGameWindowForeground() then
+            local chars = getAllChars()
+            check_shooting_logic(chars)
+            draw_esp_logic(chars)
+        end
 
         if os.clock() - last_log_flush > 5.0 then
             flush_shooting_logs()
