@@ -414,6 +414,7 @@ local function draw_esp_logic(chars)
         local myX, myY, myZ = getCharCoordinates(PLAYER_PED)
         local camX, camY, camZ = getActiveCameraCoordinates()
         local sw, sh = getScreenResolution()
+        if sw < 10 or sh < 10 then return end -- Protecao contra crash no Alt+Enter
         
         local render_list = {} 
         for _, handle in ipairs(chars) do
@@ -452,10 +453,20 @@ local function draw_esp_logic(chars)
                     local prof_name = get_closest_profession_name(sampGetPlayerColor(id))
                     if prof_name then
                         local wep_str = ""
-                        local wep = getCurrentCharWeapon(handle)
-                        if wep and wep > 0 and weapon_names_esp[wep] then wep_str = " [" .. weapon_names_esp[wep] .. "]" end
+                        local is_shooting = false
                         
-                        table.insert(side_list_data, {id=id, nick=nick, prof=prof_name, color=sampGetPlayerColor(id), dist=item.dist, wep=wep_str})
+                        if last_shot_times[id] and (os.clock() - last_shot_times[id] < 1.0) then
+                            local shot_wep = last_shot_weapons[id]
+                            if shot_wep and weapon_names_esp[shot_wep] then
+                                wep_str = " [ATIRANDO: " .. string.upper(weapon_names_esp[shot_wep]) .. "]"
+                                is_shooting = true
+                            end
+                        else
+                            local wep = getCurrentCharWeapon(handle)
+                            if wep and wep > 0 and weapon_names_esp[wep] then wep_str = " [" .. weapon_names_esp[wep] .. "]" end
+                        end
+                        
+                        table.insert(side_list_data, {id=id, nick=nick, prof=prof_name, color=sampGetPlayerColor(id), dist=item.dist, wep=wep_str, is_shooting=is_shooting})
                     end
                 end
             end
@@ -496,7 +507,7 @@ local function draw_esp_logic(chars)
                             local wep_name = weapon_names_esp[last_shot_weapons[id]] or "Arma"
                             local shoot_text = "[ATIRANDO: " .. string.upper(wep_name) .. "]"
                             local sW = renderGetFontDrawTextLength(esp_font, shoot_text)
-                            renderFontDrawText(esp_font, shoot_text, headX - (sW / 2), currentY - 12, 0xFFFF0000)
+                            renderFontDrawText(esp_font, shoot_text, headX - (sW / 2), currentY - 12, 0xFFFFFF00)
                         end
 
                         local nick = sampGetPlayerNickname(id) or "Unknown"
@@ -545,7 +556,8 @@ local function draw_esp_logic(chars)
         
         if #side_list_data > 0 then
             table.sort(side_list_data, function(a, b) return a.id < b.id end) -- Ordena por ID para ficar fixo
-            local startY = sh / 2 - (#side_list_data * 14) / 2
+            local startX = cfg.main.esp_side_list_x or 10
+            local startY = (sh / 2 - (#side_list_data * 14) / 2) + (cfg.main.esp_side_list_y or 0)
             local maxW = 0
             for _, item in ipairs(side_list_data) do
                 local text = string.format("[%d] %s - %s%s (%.0fm)", item.id, item.nick, item.prof, item.wep or "", item.dist)
@@ -553,15 +565,19 @@ local function draw_esp_logic(chars)
                 if w > maxW then maxW = w end
             end
             
-            renderDrawBox(10, startY - 5, maxW + 10, #side_list_data * 14 + 10, 0x80000000)
+            renderDrawBox(startX, startY - 5, maxW + 10, #side_list_data * 14 + 10, 0x80000000)
             
             for i, item in ipairs(side_list_data) do
                 local text = string.format("[%d] %s - %s%s (%.0fm)", item.id, item.nick, item.prof, item.wep or "", item.dist)
                 local pColor = item.color
-                if pColor == 0 then pColor = 0xFFFFFFFF end
-                pColor = bit.bor(pColor, 0xFF000000)
+                if item.is_shooting then
+                    pColor = 0xFFFFFF00 -- Amarelo
+                else
+                    if pColor == 0 then pColor = 0xFFFFFFFF end
+                    pColor = bit.bor(pColor, 0xFF000000)
+                end
                 
-                renderFontDrawText(prof_font, text, 15, startY + (i-1)*14, pColor)
+                renderFontDrawText(prof_font, text, startX + 5, startY + (i-1)*14, pColor)
             end
         end
     end
