@@ -89,7 +89,8 @@ local state = {
     search_text_armas = imgui.ImBuffer(256),
     search_text_profissoes = imgui.ImBuffer(256),
     waiting_login_dialog = false,
-    manual_scan_id_buf = imgui.ImBuffer(5)
+    manual_scan_id_buf = imgui.ImBuffer(5),
+    font_update_needed = false
 }
 state.ammo_amount_buf.v = "500"
 state.ip_extractor_total_buf.v = "300"
@@ -407,6 +408,14 @@ local function check_shooting_logic(chars)
             end
         end
     end
+end
+
+function sampev.onPlayerLeave(id, reason)
+    last_shot_times[id] = nil
+    last_shot_weapons[id] = nil
+    last_shot_log_times[id] = nil
+    state.player_devices[id] = nil
+    state.player_ips[id] = nil
 end
 
 -- FUNCAO LOGICA DO ESP (MOVIDA PARA CIMA)
@@ -2550,7 +2559,7 @@ local function draw_comandos_tab(compact)
         local side_font = imgui.ImInt(cfg.main.esp_side_list_font_size or 7)
         if imgui.SliderInt("Tamanho Fonte Lista", side_font, 5, 20) then
             cfg.main.esp_side_list_font_size = side_font.v
-            prof_font = renderCreateFont('Arial', cfg.main.esp_side_list_font_size, 5)
+            state.font_update_needed = true
         end
         local side_fist = imgui.ImBool(cfg.main.esp_side_list_show_fist)
         if imgui.Checkbox("Mostrar 'Punhos' na Lista", side_fist) then
@@ -2887,6 +2896,13 @@ function main()
 
     while true do wait(0)
         if not isGamePaused() and isGameWindowForeground() then
+            if state.font_update_needed and not imgui.IsMouseDown(0) then
+                if prof_font then renderReleaseFont(prof_font) end
+                prof_font = renderCreateFont('Arial', cfg.main.esp_side_list_font_size, 5)
+                state.font_update_needed = false
+                inicfg.save(cfg, "PainelInfo_Config_v8.ini")
+            end
+
             local chars = getAllChars()
             check_shooting_logic(chars)
             draw_esp_logic(chars)

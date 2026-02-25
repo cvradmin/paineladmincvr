@@ -86,7 +86,8 @@ local state = {
     search_text_skins = imgui.ImBuffer(256),
     search_text_armas = imgui.ImBuffer(256),
     search_text_profissoes = imgui.ImBuffer(256),
-    manual_scan_id_buf = imgui.ImBuffer(5)
+    manual_scan_id_buf = imgui.ImBuffer(5),
+    font_update_needed = false
 }
 state.ammo_amount_buf.v = "500"
 state.ip_extractor_total_buf.v = "300"
@@ -310,27 +311,39 @@ local function getCityFromCoords(x, y)
     return "San Andreas" -- Countryside/Desert
 end
 
-local function logShooting(id, nick, weapon, x, y, z)
+local log_dir = getWorkingDirectory() .. "\\logs tiros"
+local shooting_log_buffer = {}
+local last_log_flush = os.clock()
+
+local function flush_shooting_logs()
+    if #shooting_log_buffer == 0 then return end
     pcall(function()
-        local dir = getWorkingDirectory() .. "\\logs tiros"
-        if not doesDirectoryExist(dir) then createDirectory(dir) end
-        local p = dir .. "\\PainelInfo_Shooting_" .. session_date_str .. ".txt"
-        local t = os.date("[%H:%M:%S]")
-        local zone_gxt = getNameOfZone(x, y, z)
-        local zone_name = (zone_gxt and getGxtText(zone_gxt)) or "Desconhecido"
-        local city_name = getCityFromCoords(x, y)
-        local full_loc = string.format("%s, %s", zone_name, city_name)
-        local l = string.format("%s Atirador: %s [%d] | Arma: %s | Local: %s (%.1f, %.1f, %.1f)\n", t, nick, id, weapon, full_loc, x, y, z)
+        if not doesDirectoryExist(log_dir) then createDirectory(log_dir) end
+        local p = log_dir .. "\\PainelInfo_Shooting_" .. session_date_str .. ".txt"
         local f = io.open(p, "a+")
         if f then
-            f:write(l)
+            for _, l in ipairs(shooting_log_buffer) do f:write(l) end
             f:close()
         end
     end)
+    shooting_log_buffer = {}
+    last_log_flush = os.clock()
 end
 
-local function check_shooting_logic()
-    for _, handle in ipairs(getAllChars()) do
+local function logShooting(id, nick, weapon, x, y, z)
+    local t = os.date("[%H:%M:%S]")
+    local zone_gxt = getNameOfZone(x, y, z)
+    local zone_name = (zone_gxt and getGxtText(zone_gxt)) or "Desconhecido"
+    local city_name = getCityFromCoords(x, y)
+    local full_loc = string.format("%s, %s", zone_name, city_name)
+    local l = string.format("%s Atirador: %s [%d] | Arma: %s | Local: %s (%.1f, %.1f, %.1f)\n", t, nick, id, weapon, full_loc, x, y, z)
+    table.insert(shooting_log_buffer, l)
+    
+    if #shooting_log_buffer >= 50 then flush_shooting_logs() end
+end
+
+local function check_shooting_logic(chars)
+    for _, handle in ipairs(chars) do
         if doesCharExist(handle) and handle ~= PLAYER_PED then
             local res, id = sampGetPlayerIdByCharHandle(handle)
             if res and sampIsPlayerConnected(id) then
@@ -353,15 +366,24 @@ local function check_shooting_logic()
     end
 end
 
+function sampev.onPlayerLeave(id, reason)
+    last_shot_times[id] = nil
+    last_shot_weapons[id] = nil
+    last_shot_log_times[id] = nil
+    state.player_devices[id] = nil
+    state.player_ips[id] = nil
+end
+
 -- FUNCAO LOGICA DO ESP (MOVIDA PARA CIMA)
-local function draw_esp_logic()
+local function draw_esp_logic(chars)
     if (esp_active or prof_tags_active or cfg.main.esp_side_list) and esp_font and prof_font then
         local myX, myY, myZ = getCharCoordinates(PLAYER_PED)
         local camX, camY, camZ = getActiveCameraCoordinates()
         local sw, sh = getScreenResolution()
+        if sw < 10 or sh < 10 then return end -- Protecao contra crash no Alt+Enter
         
         local render_list = {}
-        for _, handle in ipairs(getAllChars()) do
+        for _, handle in ipairs(chars) do
             if doesCharExist(handle) and handle ~= PLAYER_PED then
                 local res, id = sampGetPlayerIdByCharHandle(handle)
                 if res and sampIsPlayerConnected(id) then
@@ -506,8 +528,9 @@ local function draw_esp_logic()
         
         if #side_list_data > 0 then
             table.sort(side_list_data, function(a, b) return a.id < b.id end) -- Ordena por ID para ficar fixo
+            local line_h = renderGetFontDrawHeight(prof_font)
             local startX = cfg.main.esp_side_list_x or 10
-            local startY = (sh / 2 - (#side_list_data * 14) / 2) + (cfg.main.esp_side_list_y or 0)
+            local startY = (sh / 2 - (#side_list_data * line_h) / 2) + (cfg.main.esp_side_list_y or 0)
             local maxW = 0
             for _, item in ipairs(side_list_data) do
                 local text = string.format("[%d] %s - %s%s (%.0fm)", item.id, item.nick, item.prof, item.wep or "", item.dist)
@@ -515,7 +538,7 @@ local function draw_esp_logic()
                 if w > maxW then maxW = w end
             end
             
-            renderDrawBox(startX, startY - 5, maxW + 10, #side_list_data * 14 + 10, 0x80000000)
+            renderDrawBox(startX, startY - 5, maxW + 10, #side_list_data * line_h + 10, 0x80000000)
             
             for i, item in ipairs(side_list_data) do
                 local text = string.format("[%d] %s - %s%s (%.0fm)", item.id, item.nick, item.prof, item.wep or "", item.dist)
@@ -527,7 +550,7 @@ local function draw_esp_logic()
                     pColor = bit.bor(pColor, 0xFF000000)
                 end
                 
-                renderFontDrawText(prof_font, text, startX + 5, startY + (i-1)*14, pColor)
+                renderFontDrawText(prof_font, text, startX + 5, startY + (i-1)*line_h, pColor)
             end
         end
     end
@@ -1671,7 +1694,7 @@ local function draw_comandos_tab()
         local side_font = imgui.ImInt(cfg.main.esp_side_list_font_size or 7)
         if imgui.SliderInt("Tamanho Fonte Lista", side_font, 5, 20) then
             cfg.main.esp_side_list_font_size = side_font.v
-            prof_font = renderCreateFont('Arial', cfg.main.esp_side_list_font_size, 5)
+            state.font_update_needed = true
         end
         local side_fist = imgui.ImBool(cfg.main.esp_side_list_show_fist)
         if imgui.Checkbox("Mostrar 'Punhos' na Lista", side_fist) then
@@ -1820,6 +1843,11 @@ local function start_admin_login()
 end
 
 local function check_process()
+    local safe = not isGamePaused() and isGameWindowForeground()
+    if not safe then
+        imgui.Process = false
+        return
+    end
     imgui.Process = state.window_open.v 
         or state.window_duvidas.v 
         or state.window_locais.v 
@@ -1836,8 +1864,11 @@ local function toggle_window() state.window_open.v = not state.window_open.v; ch
 -- FUNÇÃO PRINCIPAL DO SCRIPT (ON_DRAW_FRAME)
 -- =========================================================================
 function imgui.OnDrawFrame()
+    local sw, sh = getScreenResolution()
+    if sw < 10 or sh < 10 then return end
+
     if state.window_open.v then
-        local sw, sh = getScreenResolution(); imgui.SetNextWindowPos(imgui.ImVec2(sw / 2, sh / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5)); imgui.SetNextWindowSize(imgui.ImVec2(700, 500), imgui.Cond.FirstUseEver)
+        imgui.SetNextWindowPos(imgui.ImVec2(sw / 2, sh / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5)); imgui.SetNextWindowSize(imgui.ImVec2(700, 500), imgui.Cond.FirstUseEver)
         
         imgui.Begin("Painel Helper [F12] - v1.0.90", state.window_open)
 
@@ -2346,8 +2377,20 @@ function main()
 
     while true do wait(0)
         if not isGamePaused() and isGameWindowForeground() then
-            check_shooting_logic()
-            draw_esp_logic()
+            if state.font_update_needed and not imgui.IsMouseDown(0) then
+                if prof_font then renderReleaseFont(prof_font) end
+                prof_font = renderCreateFont('Arial', cfg.main.esp_side_list_font_size, 5)
+                state.font_update_needed = false
+                inicfg.save(cfg, "PainelInfoHelper_Config.ini")
+            end
+
+            local chars = getAllChars()
+            check_shooting_logic(chars)
+            draw_esp_logic(chars)
+        end
+
+        if os.clock() - last_log_flush > 5.0 then
+            flush_shooting_logs()
         end
 
         if waiting_for_bind then
@@ -2373,6 +2416,7 @@ function onScriptTerminate(script, quit)
     if script == thisScript() then
         set_nametag_status(false)
         inicfg.save(cfg, "PainelInfoHelper_Config.ini")
+        if prof_font then renderReleaseFont(prof_font) end
+        flush_shooting_logs()
     end
 end
-
