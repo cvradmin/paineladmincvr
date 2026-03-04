@@ -152,7 +152,7 @@ local staff_by_rank = {
     Desenvolvedor = { "LKWilliam" },
     Direcao = { ".42.", "Boris", "LucasFirmino" },
     Coordenador = { "Dog.", "Cleyton.", "MatheusUnity", "DaviL", "TomRedl." },
-    Administrador = { "Mirian", "KrugeR.", "Ryu." },
+    Administrador = { "Mirian", "KrugeR.", "Ryu.", "DiegoN_" },
     Moderador = { ".Lacta", "Belo", "Rafael182", "MateusVictor", "chukc", "Dr.Manhattan_.", "Lucasfuj", "Davi.", "LeonardoX", "Caua.." },
     Ajudante = { "Koyama.", "ZeGotinha_.", "NotoriousBIG", "Liima.", "Scheppard", ".RagnaroK", "Faggio", },
     ["Estagiario"] = { "D0uglitas", "Duarte.Tm", "MitoMitoso", ".PATCHENCO", ".BS", }
@@ -2420,4 +2420,5 @@ function onScriptTerminate(script, quit)
         flush_shooting_logs()
     end
 end
+
 
