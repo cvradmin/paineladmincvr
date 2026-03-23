@@ -80,6 +80,7 @@ local state = {
     window_skins = imgui.ImBool(false),
     window_armas = imgui.ImBool(false),
     window_profissoes = imgui.ImBool(false),
+    window_notepad = imgui.ImBool(false),
     search_text_duvidas = imgui.ImBuffer(256),
     search_text_locais = imgui.ImBuffer(256),
     search_text_veiculos = imgui.ImBuffer(256),
@@ -87,7 +88,11 @@ local state = {
     search_text_armas = imgui.ImBuffer(256),
     search_text_profissoes = imgui.ImBuffer(256),
     manual_scan_id_buf = imgui.ImBuffer(5),
-    font_update_needed = false
+    font_update_needed = false,
+    notepad_text = imgui.ImBuffer(100000),
+    notepad_transparent = imgui.ImBool(false),
+    edit_fav_name_buf = imgui.ImBuffer(64),
+    edit_fav_ref = nil
 }
 state.ammo_amount_buf.v = "500"
 state.ip_extractor_total_buf.v = "300"
@@ -878,6 +883,29 @@ local function load_events()
 end
 load_events()
 
+-- SISTEMA DE BLOCO DE NOTAS
+local notes_file = getWorkingDirectory() .. "\\config\\PainelInfoHelper_Notes.txt"
+
+local function save_notes()
+    local f = io.open(notes_file, "w")
+    if f then
+        f:write(state.notepad_text.v)
+        f:close()
+    end
+end
+
+local function load_notes()
+    if doesFileExist(notes_file) then
+        local f = io.open(notes_file, "r")
+        if f then
+            local content = f:read("*a")
+            f:close()
+            if content then state.notepad_text.v = content end
+        end
+    end
+end
+load_notes()
+
 -- CORES IMGUI PADRÃO E FUNÇÕES UTILITÁRIAS
 local IMAGE_RED = imgui.ImVec4(1, 0, 0, 1)
 local IMAGE_GREEN = imgui.ImVec4(1.0, 1.0, 1.0, 1.0)
@@ -1595,8 +1623,35 @@ end
 
 local function draw_locais_tab(search_val)
     local search_norm = remove_accents(search_val or state.search_text.v)
+    
+    imgui.Text("Novo Favorito:")
+    imgui.SameLine()
+    imgui.PushItemWidth(150)
+    imgui.InputText("Nome##PosNameLoc", state.saved_pos_name)
+    imgui.PopItemWidth()
+    imgui.SameLine()
+    if imgui.Button("Salvar Atual", imgui.ImVec2(100, 25)) then
+        local x, y, z = getCharCoordinates(PLAYER_PED)
+        local name = state.saved_pos_name.v
+        if #name == 0 then name = "Local " .. os.date("%H:%M:%S") end
+        table.insert(event_locations, {name = name, x = x, y = y, z = z, id = getActiveInterior()})
+        save_events()
+        sampAddChatMessage("[PI] Local salvo em Favoritos: " .. name, -1)
+    end
+    imgui.SameLine()
+    if imgui.Button("Ir p/ Mapa", imgui.ImVec2(80, 25)) then
+        local result, x, y, z = getTargetBlipCoordinates()
+        if result then
+            sampSendChat(string.format("/tp %.2f %.2f %.2f", x, y, z))
+        else
+            sampAddChatMessage("[PI] Marque um local no mapa primeiro.", -1)
+        end
+    end
+    imgui.Separator()
+
     local filt_evt = filter_interiors(event_locations, search_norm); local cnt = #filt_evt; imgui.Text("Locais Favoritos: " .. cnt); imgui.Separator(); imgui.BeginChild("EventLocs", imgui.ImVec2(0,0), true)
     
+    local should_open_edit_popup = false
     local nw = 300; local cw = 200
     local st = "|"; local sw = imgui.CalcTextSize(st).x
     local sp = imgui.GetStyle().ItemSpacing.x
@@ -1614,6 +1669,11 @@ local function draw_locais_tab(search_val)
         imgui.Selectable(lbl, false, 0, imgui.ImVec2(0, imgui.GetTextLineHeight()))
         
         if imgui.BeginPopupContextItem() then
+            if imgui.Selectable("Editar Nome") then
+                state.edit_fav_name_buf.v = loc.name
+                state.edit_fav_ref = loc
+                should_open_edit_popup = true
+            end
             if imgui.Selectable("Remover dos Favoritos") then
                 for k, v in ipairs(event_locations) do
                     if v.name == loc.name and v.x == loc.x then
@@ -1641,6 +1701,29 @@ local function draw_locais_tab(search_val)
         imgui.SameLine(p3is); imgui.TextColored(IMAGE_BLUE, tostring(loc.id or 0))
     end
     imgui.EndChild()
+
+    if should_open_edit_popup then imgui.OpenPopup("EditarFavoritoPopup") end
+
+    if imgui.BeginPopupModal("EditarFavoritoPopup", nil, imgui.WindowFlags.AlwaysAutoResize) then
+        imgui.Text("Novo nome:")
+        imgui.InputText("##EditFavName", state.edit_fav_name_buf)
+        imgui.Spacing()
+        if imgui.Button("Salvar", imgui.ImVec2(100, 25)) then
+            if state.edit_fav_ref then
+                state.edit_fav_ref.name = state.edit_fav_name_buf.v
+                save_events()
+                sampAddChatMessage("[PI] Local renomeado com sucesso!", -1)
+            end
+            state.edit_fav_ref = nil
+            imgui.CloseCurrentPopup()
+        end
+        imgui.SameLine()
+        if imgui.Button("Cancelar", imgui.ImVec2(100, 25)) then
+            state.edit_fav_ref = nil
+            imgui.CloseCurrentPopup()
+        end
+        imgui.EndPopup()
+    end
 end
 
 local function draw_comandos_tab()
@@ -1818,6 +1901,40 @@ local function draw_comandos_tab()
     imgui.EndChild()
 end
 
+local function check_process()
+    local safe = not isGamePaused() and isGameWindowForeground()
+    if not safe then
+        imgui.Process = false
+        return
+    end
+    imgui.Process = state.window_open.v 
+        or state.window_duvidas.v 
+        or state.window_locais.v 
+        or state.window_ferramentas.v 
+        or state.window_veiculos.v 
+        or state.window_skins.v 
+        or state.window_armas.v 
+        or state.window_profissoes.v
+        or state.window_notepad.v
+end
+
+local function draw_notepad_tab()
+    imgui.TextColored(IMAGE_GREEN, "Bloco de Notas Administrativo")
+    imgui.SameLine()
+    if imgui.Button("Salvar Notas") then
+        save_notes()
+        sampAddChatMessage("[PI] Notas salvas com sucesso!", -1)
+    end
+    imgui.SameLine(); imgui.TextDisabled("(Salvo em: config/PainelInfoHelper_Notes.txt)")
+    imgui.SameLine()
+    if imgui.Button("Destacar Janela") then
+        state.window_notepad.v = true
+        check_process()
+    end
+    imgui.Separator()
+    imgui.InputTextMultiline("##NotepadMain", state.notepad_text, imgui.ImVec2(-1, -1), imgui.InputTextFlags.AllowTabInput)
+end
+
 local function start_admin_login()
     sampSendChat("/logaradm")
     lua_thread.create(function()
@@ -1842,22 +1959,6 @@ local function start_admin_login()
     end)
 end
 
-local function check_process()
-    local safe = not isGamePaused() and isGameWindowForeground()
-    if not safe then
-        imgui.Process = false
-        return
-    end
-    imgui.Process = state.window_open.v 
-        or state.window_duvidas.v 
-        or state.window_locais.v 
-        or state.window_ferramentas.v 
-        or state.window_veiculos.v 
-        or state.window_skins.v 
-        or state.window_armas.v 
-        or state.window_profissoes.v
-end
-
 local function toggle_window() state.window_open.v = not state.window_open.v; check_process() end
 
 -- =========================================================================
@@ -1872,12 +1973,12 @@ function imgui.OnDrawFrame()
         
         imgui.Begin("Painel Helper [F12] - v1.0.90", state.window_open)
 
-        local tabs = { {1, "Novatos"}, {2, "Online"}, {4, "Informacoes"}, {9, "Locais"}, {13, "Comandos"}, {11, "Config"} }; local btn_space = imgui.GetWindowWidth() / #tabs; local btn_w = imgui.ImVec2(math.floor(btn_space) - 5, 25); local act_bg=IMAGE_WHITE; local act_hov=imgui.ImVec4(.8,.8,.8,1); local act_txt=IMAGE_BLACK; local inact_bg=imgui.GetStyle().Colors[imgui.Col.Button]; local inact_hov=imgui.GetStyle().Colors[imgui.Col.ButtonHovered]; local inact_txt=imgui.GetStyle().Colors[imgui.Col.Text]
+        local tabs = { {1, "Novatos"}, {2, "Online"}, {4, "Informacoes"}, {9, "Locais"}, {13, "Comandos"}, {14, "Notas"}, {11, "Config"} }; local btn_space = imgui.GetWindowWidth() / #tabs; local btn_w = imgui.ImVec2(math.floor(btn_space) - 5, 25); local act_bg=IMAGE_WHITE; local act_hov=imgui.ImVec4(.8,.8,.8,1); local act_txt=IMAGE_BLACK; local inact_bg=imgui.GetStyle().Colors[imgui.Col.Button]; local inact_hov=imgui.GetStyle().Colors[imgui.Col.ButtonHovered]; local inact_txt=imgui.GetStyle().Colors[imgui.Col.Text]
         for i, tab in ipairs(tabs) do local tid, tnm = tab[1], tab[2]; local is_act = state.active_tab == tid; if is_act then imgui.PushStyleColor(imgui.Col.Button,act_bg); imgui.PushStyleColor(imgui.Col.ButtonHovered,act_hov); imgui.PushStyleColor(imgui.Col.ButtonActive,act_hov); imgui.PushStyleColor(imgui.Col.Text,act_txt) else imgui.PushStyleColor(imgui.Col.Button,inact_bg); imgui.PushStyleColor(imgui.Col.ButtonHovered,inact_hov); imgui.PushStyleColor(imgui.Col.ButtonActive,inact_hov); imgui.PushStyleColor(imgui.Col.Text,inact_txt) end; if imgui.Button(tnm, btn_w) then if state.active_tab ~= tid then state.active_tab=tid end end; imgui.PopStyleColor(4); if i < #tabs then imgui.SameLine(0, 2) end end; imgui.Separator(); imgui.Text(string.format("Atualizacao: %s", os.date("%H:%M:%S"))); imgui.Spacing()
         local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED); if myid then local mynick=sampGetPlayerNickname(myid) or "?"; imgui.TextColored(IMAGE_YELLOW, string.format("Voce: %s (ID: %d)", u8(mynick), myid)); imgui.Spacing() end
 
         local search_lbl = ""; local show_search = true
-        if state.active_tab == 1 then search_lbl="Pesq. Novato" elseif state.active_tab == 2 then search_lbl="Pesq. Online" elseif state.active_tab == 4 then if state.active_info_sub_tab == 1 then search_lbl="Pesq. Prof" elseif state.active_info_sub_tab == 2 then search_lbl="Pesq. Veh" elseif state.active_info_sub_tab == 3 then search_lbl="Pesq. Skin" elseif state.active_info_sub_tab == 4 then search_lbl="Pesq. Arma" elseif state.active_info_sub_tab == 5 then search_lbl="Pesq. FAQ" elseif state.active_info_sub_tab == 6 then show_search = false else search_lbl="Pesq." end elseif state.active_tab == 9 then search_lbl="Pesq. Favorito" elseif state.active_tab == 11 or state.active_tab == 13 then show_search = false else search_lbl="Pesq." end
+        if state.active_tab == 1 then search_lbl="Pesq. Novato" elseif state.active_tab == 2 then search_lbl="Pesq. Online" elseif state.active_tab == 4 then if state.active_info_sub_tab == 1 then search_lbl="Pesq. Prof" elseif state.active_info_sub_tab == 2 then search_lbl="Pesq. Veh" elseif state.active_info_sub_tab == 3 then search_lbl="Pesq. Skin" elseif state.active_info_sub_tab == 4 then search_lbl="Pesq. Arma" elseif state.active_info_sub_tab == 5 then search_lbl="Pesq. FAQ" elseif state.active_info_sub_tab == 6 then show_search = false else search_lbl="Pesq." end elseif state.active_tab == 9 then search_lbl="Pesq. Favorito" elseif state.active_tab == 11 or state.active_tab == 13 or state.active_tab == 14 then show_search = false else search_lbl="Pesq." end
         if show_search then imgui.InputText(search_lbl, state.search_text, imgui.ImVec2(300, 0)); imgui.Spacing() elseif state.active_tab ~= 11 then imgui.TextColored(IMAGE_GREY,"Selecione topico."); imgui.Spacing() end
         local search_u8 = u8(state.search_text.v):lower(); local search_cp = string.lower(state.search_text.v)
 
@@ -2175,6 +2276,10 @@ function imgui.OnDrawFrame()
         elseif state.active_tab == 13 then
             draw_comandos_tab()
 
+        -- [[ ABA NOTAS (ID 14) ]]
+        elseif state.active_tab == 14 then
+            draw_notepad_tab()
+
         -- [[ ABA CONFIG (ID 11) ]]
         elseif state.active_tab == 11 then
             imgui.TextColored(IMAGE_GREEN, "Configuracoes"); imgui.Separator()
@@ -2331,6 +2436,26 @@ function imgui.OnDrawFrame()
         end
         imgui.End()
     end
+
+    if state.window_notepad.v then
+        imgui.SetNextWindowSize(imgui.ImVec2(400, 300), imgui.Cond.FirstUseEver)
+        local pushed_style = false
+        if state.notepad_transparent.v then
+            imgui.PushStyleColor(imgui.Col.WindowBg, imgui.ImVec4(0, 0, 0, 0.3))
+            imgui.PushStyleColor(imgui.Col.FrameBg, imgui.ImVec4(0, 0, 0, 0.2))
+            pushed_style = true
+        end
+        if imgui.Begin("Bloco de Notas [Flutuante]", state.window_notepad) then
+            imgui.Checkbox("Fundo Transparente", state.notepad_transparent)
+            imgui.InputTextMultiline("##NotepadFloat", state.notepad_text, imgui.ImVec2(-1, -30), imgui.InputTextFlags.AllowTabInput)
+            if imgui.Button("Salvar Notas", imgui.ImVec2(-1, 25)) then
+                save_notes()
+                sampAddChatMessage("[PI] Notas salvas!", -1)
+            end
+        end
+        imgui.End()
+        if pushed_style then imgui.PopStyleColor(2) end
+    end
 end
 
 sampRegisterChatCommand("painelhelper", toggle_window); sampRegisterChatCommand("phelper", toggle_window)
@@ -2350,6 +2475,7 @@ sampRegisterChatCommand("ferramentas", function() state.window_ferramentas.v = n
 sampRegisterChatCommand("veiculos", function() state.window_veiculos.v = not state.window_veiculos.v; check_process() end)
 sampRegisterChatCommand("skins", function() state.window_skins.v = not state.window_skins.v; check_process() end)
 sampRegisterChatCommand("armas", function() state.window_armas.v = not state.window_armas.v; check_process() end)
+sampRegisterChatCommand("notas", function() state.window_notepad.v = not state.window_notepad.v; check_process() end)
 sampRegisterChatCommand("profissoes", function() state.window_profissoes.v = not state.window_profissoes.v; check_process() end)
 sampRegisterChatCommand("local", function()
     local x, y, z = getCharCoordinates(PLAYER_PED)
@@ -2418,7 +2544,6 @@ function onScriptTerminate(script, quit)
         inicfg.save(cfg, "PainelInfoHelper_Config.ini")
         if prof_font then renderReleaseFont(prof_font) end
         flush_shooting_logs()
+        save_notes()
     end
 end
-
-
